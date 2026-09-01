@@ -98,12 +98,12 @@ export const ThresholdSimulator = () => {
         </div>
 
         {/* Ingestion Trigger Button */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
+        <div className="simulator-trigger-group">
           <select
             className="ops-select"
             value={selectedDistrict}
             onChange={(e) => setSelectedDistrict(e.target.value)}
-            style={{ width: '130px', height: '36px' }}
+            style={{ height: '36px' }}
           >
             <option value="Mangan">Mangan, Sikkim</option>
             <option value="Haflong">Haflong, Assam</option>

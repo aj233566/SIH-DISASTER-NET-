@@ -13,7 +13,8 @@ export const LanguageSwitcher = ({ className = '' }) => {
       aria-label="Toggle language"
     >
       <Globe size={15} />
-      <span>{language === 'en' ? 'EN | हिन्दी' : 'हिन्दी | EN'}</span>
+      {/* Icon-only below `sm`; full bilingual label from `sm` up — keeps the topbar from overflowing on mobile */}
+      <span className="d-none d-sm-inline">{language === 'en' ? 'EN | हिन्दी' : 'हिन्दी | EN'}</span>
     </button>
   );
 };

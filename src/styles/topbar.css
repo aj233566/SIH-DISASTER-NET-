@@ -3,6 +3,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  row-gap: 10px;
   gap: 16px;
   padding: 16px 32px;
   background-color: var(--bg-secondary);
@@ -42,16 +44,34 @@
   }
 }
 
+.topbar-title-section {
+  /* Allows the flex item to shrink below its text's intrinsic width instead of
+     forcing .ops-topbar wider than the viewport (flex items default to min-width:auto). */
+  min-width: 0;
+}
+
 .topbar-title-section h1 {
   font-size: 1.25rem;
   margin: 0;
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .topbar-right-controls {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 16px;
+  margin-left: auto;
+}
+
+@media (max-width: 575.98px) {
+  .topbar-right-controls {
+    gap: 8px;
+  }
 }
 
 /* Time Widget */
@@ -85,6 +105,9 @@
 }
 
 .role-pill-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   background: transparent;
   border: none;
   color: var(--text-muted);

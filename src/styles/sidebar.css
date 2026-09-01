@@ -147,7 +147,11 @@
   .ops-sidebar.open {
     transform: translateX(0);
   }
-  .mobile-sidebar-overlay {
+  /* Bug fix: this rule previously applied to .mobile-sidebar-overlay unconditionally,
+     so the full-screen overlay (z-index: 999, above the topbar's z-index: 900) blocked
+     every click on the entire app whenever the sidebar was closed — including the
+     hamburger button used to open it. Must only render when the drawer is actually open. */
+  .mobile-sidebar-overlay.show {
     display: block;
     position: fixed;
     inset: 0;

@@ -9,23 +9,34 @@ export const RoleSwitcher = () => {
 
   return (
     <div className="role-selector-pill-group" title={t('common.switchRole')}>
+      {/* Icon always visible; label collapses below `sm` so the 3-way switch stays
+          usable without forcing the topbar wider than a mobile viewport. */}
       <button
         className={`role-pill-btn citizen ${role === ROLES.CITIZEN ? 'active' : ''}`}
         onClick={() => setRole(ROLES.CITIZEN)}
+        aria-label={t('common.citizen')}
+        title={t('common.citizen')}
       >
-        {t('common.citizen')}
+        <UserCheck size={13} />
+        <span className="d-none d-sm-inline">{t('common.citizen')}</span>
       </button>
       <button
         className={`role-pill-btn fieldOfficer ${role === ROLES.FIELD_OFFICER ? 'active' : ''}`}
         onClick={() => setRole(ROLES.FIELD_OFFICER)}
+        aria-label={t('common.fieldOfficer')}
+        title={t('common.fieldOfficer')}
       >
-        {t('common.fieldOfficer')}
+        <HardHat size={13} />
+        <span className="d-none d-sm-inline">{t('common.fieldOfficer')}</span>
       </button>
       <button
         className={`role-pill-btn authority ${role === ROLES.AUTHORITY ? 'active' : ''}`}
         onClick={() => setRole(ROLES.AUTHORITY)}
+        aria-label={t('common.authority')}
+        title={t('common.authority')}
       >
-        {t('common.authority')}
+        <ShieldAlert size={13} />
+        <span className="d-none d-sm-inline">{t('common.authority')}</span>
       </button>
     </div>
   );
