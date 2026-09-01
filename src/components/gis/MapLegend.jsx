@@ -1,19 +1,35 @@
 import React, { useState, useEffect } from 'react';
 
 /**
- * MapLegend — Compact Operational Legend for CASCADE-NET GIS
+ * ============================================================================
+ * MAP LEGEND — RESPONSIVE TACTICAL SYMBOLOGY CARD
+ * ============================================================================
+ * 
+ * RESPONSIVE BEHAVIOR SPECIFICATION:
+ * - Desktop (>= 1200px): Visible bottom-left tactical reference.
+ * - Tablet (768px - 1199px): Auto-collapsed in operator/minimal modes.
+ * - Mobile (< 768px): Auto-collapsed into a compact trigger pill (// LEGEND ℹ +)
+ *   so the main operational map canvas remains uncluttered.
+ * ============================================================================
  */
 export default function MapLegend({ hudMode = 'tactical' }) {
-  const [isCollapsed, setIsCollapsed] = useState(hudMode !== 'tactical');
+  const isMobileInitial = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
+  const [isCollapsed, setIsCollapsed] = useState(hudMode !== 'tactical' || isMobileInitial);
 
   useEffect(() => {
-    if (hudMode === 'minimal' || hudMode === 'operator') setIsCollapsed(true);
-    if (hudMode === 'tactical') setIsCollapsed(false);
-  }, [hudMode]);
+    if (hudMode === 'minimal' || hudMode === 'operator' || isMobileInitial) setIsCollapsed(true);
+    if (hudMode === 'tactical' && !isMobileInitial) setIsCollapsed(false);
+  }, [hudMode, isMobileInitial]);
 
   return (
     <div className={`gis-legend-overlay ${isCollapsed ? 'collapsed' : ''}`}>
-      <div className="gis-panel-header" onClick={() => setIsCollapsed(!isCollapsed)}>
+      <div 
+        className="gis-panel-header" 
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        role="button"
+        tabIndex={0}
+        aria-expanded={!isCollapsed}
+      >
         <div className="gis-panel-title">
           <span style={{ color: 'var(--color-info)' }}>//</span>
           <span>LEGEND</span>
@@ -21,6 +37,10 @@ export default function MapLegend({ hudMode = 'tactical' }) {
         <button
           className="gis-collapse-btn"
           aria-label={isCollapsed ? 'Expand Legend' : 'Collapse Legend'}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsCollapsed(!isCollapsed);
+          }}
         >
           {isCollapsed ? '+' : '−'}
         </button>

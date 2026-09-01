@@ -1,17 +1,27 @@
 import React from 'react';
 
 /**
- * FloatingCommandDock — Adaptive Tactical Command Island (Bottom-Center)
- * Houses coordinate telemetry, style switcher, simulation scenario switcher, HUD density modes, and reset reticle.
+ * ============================================================================
+ * FLOATING COMMAND DOCK — RESPONSIVE TACTICAL BOTTOM BAR
+ * ============================================================================
+ * 
+ * RESPONSIVE BEHAVIOR SPECIFICATION:
+ * - Desktop (>= 1200px): Centered floating horizontal island.
+ * - Tablet (768px - 1199px): Responsive island wrapping into 2 compact sections.
+ * - Mobile (< 768px): Full-width 2-row command bar anchored to the bottom.
+ * ============================================================================
  */
+
 export default function FloatingCommandDock({
-  simScenario = 'BASELINE', // 'BASELINE' | 'TRAFFIC_SPIKE' | 'CLEAR_RING_ROAD_R17'
-  onSetSimScenario,
-  hudMode = 'tactical',
-  onSetHudMode,
   mapStyle = 'tactical',
-  onSetMapStyle,
-  onResetView,
+  onSetMapStyle = () => {},
+  simScenario = 'BASELINE',
+  onSetScenario = () => {},
+  hudMode = 'tactical',
+  onSetHudMode = () => {},
+  onResetView = () => {},
+  activeCorridorName = 'Western Ridge Alternate',
+  activeCorridorEta = '26 mins',
   isLiveTraffic = false
 }) {
   const mapStyles = [
@@ -22,115 +32,93 @@ export default function FloatingCommandDock({
     { key: 'analysis', label: 'ANLYS' }
   ];
 
+  const hudModes = [
+    { key: 'tactical', label: 'TACTICAL' },
+    { key: 'operator', label: 'OPERATOR' },
+    { key: 'minimal', label: 'MINIMAL' }
+  ];
+
   return (
-    <div className="gis-floating-dock">
-      {/* 1. Sector Telemetry & Coordinates */}
-      <div className="gis-dock-telemetry">
-        <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>SIKKIM/NH-10</span>
-        <span style={{ color: 'var(--border-subtle)' }}>|</span>
-        <span style={{ color: 'var(--color-info)' }}>27.2850°N 88.5650°E</span>
-        <span style={{ color: 'var(--border-subtle)' }}>|</span>
-        <span style={{ fontSize: '8px', color: isLiveTraffic ? 'var(--color-operational)' : 'var(--text-muted)' }}>
-          {isLiveTraffic ? '● LIVE TRAFFIC' : '○ SIMULATED'}
-        </span>
-      </div>
-
-      <span style={{ color: 'var(--border-subtle)' }}>|</span>
-
-      {/* 2. Map Style Switcher */}
-      <div className="gis-dock-section">
-        <span style={{ fontSize: '8px', color: 'var(--text-muted)' }}>STYLE:</span>
-        <div className="gis-dock-button-group">
-          {mapStyles.map((s) => (
-            <button
-              key={s.key}
-              data-style={s.key}
-              className={`gis-dock-btn ${mapStyle === s.key ? 'is-active' : ''}`}
-              onClick={() => onSetMapStyle(s.key)}
-              title={`Switch map preset to ${s.label}`}
-            >
-              {s.label}
-            </button>
-          ))}
+    <footer className="gis-floating-dock" role="region" aria-label="Tactical Command Console">
+      {/* 1. Sector Telemetry & Coordinate Readout */}
+      <div className="gis-dock-section gis-dock-meta-section">
+        <div className="gis-dock-telemetry-text">
+          <span className="gis-dock-sector-badge">SIKKIM/NH-10</span>
+          <span className="gis-dock-coords">27.2850°N 88.5650°E</span>
+          <span className="gis-dock-status-dot-pulse" title="Simulated Tactical Telemetry Stream" />
         </div>
       </div>
 
-      <span style={{ color: 'var(--border-subtle)' }}>|</span>
-
-      {/* 3. Multi-Scenario Simulation Feed Switcher */}
-      <div className="gis-dock-section">
-        <span style={{ fontSize: '8px', color: 'var(--text-muted)' }}>SCENARIO:</span>
+      {/* 2. Simulation Scenario Quick Switcher */}
+      <div className="gis-dock-section gis-dock-sim-section">
+        <span className="gis-dock-section-title">SCENARIO:</span>
         <div className="gis-dock-button-group">
           <button
-            data-scenario="BASELINE"
             className={`gis-dock-btn ${simScenario === 'BASELINE' ? 'is-active' : ''}`}
-            onClick={() => onSetSimScenario('BASELINE')}
-            title="Baseline Landslide State (NH-10 Km 32 Blocked, 26m Detour)"
+            onClick={() => onSetScenario('BASELINE')}
+            title="Baseline Landslide Inundation (Km 32 Blocked)"
           >
             BASELINE
           </button>
           <button
-            data-scenario="TRAFFIC_SPIKE"
-            className={`gis-dock-btn ${simScenario === 'TRAFFIC_SPIKE' ? 'is-active-sim' : ''}`}
-            onClick={() => onSetSimScenario('TRAFFIC_SPIKE')}
-            title="Simulate Evacuation Traffic Surge on Ridge Bypass (+18m delay -> Rongli Bypass Recommended)"
+            className={`gis-dock-btn ${simScenario === 'TRAFFIC_SPIKE' ? 'is-active' : ''}`}
+            onClick={() => onSetScenario('TRAFFIC_SPIKE')}
+            title="Evacuation Convoy Surge (Western Ridge Delayed)"
           >
             TRAFFIC SURGE
           </button>
           <button
-            data-scenario="CLEAR_RING_ROAD_R17"
             className={`gis-dock-btn ${simScenario === 'CLEAR_RING_ROAD_R17' ? 'is-active-sim' : ''}`}
-            onClick={() => onSetSimScenario('CLEAR_RING_ROAD_R17')}
-            title="Simulate BRO Heavy Dozers Clearance on NH-10 (Direct 14m Route Restored)"
+            onClick={() => onSetScenario('CLEAR_RING_ROAD_R17')}
+            title="BRO Clearance Complete (NH-10 Restored)"
           >
             NH-10 CLEARED
           </button>
         </div>
       </div>
 
-      <span style={{ color: 'var(--border-subtle)' }}>|</span>
-
-      {/* 4. HUD Density View Mode */}
-      <div className="gis-dock-section">
-        <span style={{ fontSize: '8px', color: 'var(--text-muted)' }}>VIEW:</span>
-        <div className="gis-dock-button-group">
-          <button
-            className={`gis-dock-btn ${hudMode === 'tactical' ? 'is-active' : ''}`}
-            onClick={() => onSetHudMode('tactical')}
-            title="Full Tactical Overlays [Key: H]"
-          >
-            TACTICAL
-          </button>
-          <button
-            className={`gis-dock-btn ${hudMode === 'operator' ? 'is-active' : ''}`}
-            onClick={() => onSetHudMode('operator')}
-            title="Operator Reduced HUD [Key: H]"
-          >
-            OPERATOR
-          </button>
-          <button
-            className={`gis-dock-btn ${hudMode === 'minimal' ? 'is-active' : ''}`}
-            onClick={() => onSetHudMode('minimal')}
-            title="Minimal Map-Dominant View [Key: H]"
-          >
-            MINIMAL
-          </button>
+      {/* 3. Style & Mode Toggles */}
+      <div className="gis-dock-section gis-dock-controls-section">
+        <div className="gis-dock-button-group gis-dock-style-group">
+          {mapStyles.slice(0, 3).map((st) => (
+            <button
+              key={st.key}
+              className={`gis-dock-btn ${mapStyle === st.key ? 'is-active' : ''}`}
+              onClick={() => onSetMapStyle(st.key)}
+            >
+              {st.label}
+            </button>
+          ))}
         </div>
+
+        <div className="gis-dock-button-group gis-dock-hud-group">
+          {hudModes.map((m) => (
+            <button
+              key={m.key}
+              className={`gis-dock-btn ${hudMode === m.key ? 'is-active' : ''}`}
+              onClick={() => onSetHudMode(m.key)}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+
+        <button
+          className="gis-dock-reset-btn"
+          onClick={onResetView}
+          title="Recenter Reticle (R)"
+          aria-label="Reset Map Reticle"
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="22" y1="12" x2="18" y2="12" />
+            <line x1="6" y1="12" x2="2" y2="12" />
+            <line x1="12" y1="6" x2="12" y2="2" />
+            <line x1="12" y1="22" x2="12" y2="18" />
+          </svg>
+          <span className="gis-dock-reset-text">RETICLE</span>
+        </button>
       </div>
-
-      <span style={{ color: 'var(--border-subtle)' }}>|</span>
-
-      {/* 5. Reset Reticle Button */}
-      <button className="gis-dock-reset-btn" onClick={onResetView} title="Reset View Center [Key: R]">
-        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="2" x2="12" y2="6"/>
-          <line x1="12" y1="18" x2="12" y2="22"/>
-          <line x1="2" y1="12" x2="6" y2="12"/>
-          <line x1="18" y1="12" x2="22" y2="12"/>
-        </svg>
-        <span>RETICLE</span>
-      </button>
-    </div>
+    </footer>
   );
 }

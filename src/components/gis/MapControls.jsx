@@ -1,8 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 /**
- * MapControls — Operational Control Matrix with Layer Toggles, Map Style Selector & Severity Filter
+ * ============================================================================
+ * MAP CONTROLS — RESPONSIVE CONTROL MATRIX
+ * ============================================================================
+ * 
+ * RESPONSIVE BEHAVIOR SPECIFICATION:
+ * - Desktop (>= 1200px): Right tactical control matrix rail.
+ * - Tablet (768px - 1199px): Compressed rail with touch padding.
+ * - Mobile (< 768px): Collapses into a compact top-right button pill.
+ *   Expanding presents a clean drawer with large touch targets.
+ * ============================================================================
  */
+
 export default function MapControls({
   layerVisibility = {},
   onToggleLayer = () => {},
@@ -13,7 +23,12 @@ export default function MapControls({
   onResetView = () => {},
   hudMode = 'tactical'
 }) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const isMobileInitial = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
+  const [isCollapsed, setIsCollapsed] = useState(hudMode === 'minimal' || isMobileInitial);
+
+  useEffect(() => {
+    if (hudMode === 'minimal') setIsCollapsed(true);
+  }, [hudMode]);
 
   const layerItems = [
     { key: 'incidents', label: 'INC', title: 'Emergency Incidents / Landslides' },
@@ -35,26 +50,33 @@ export default function MapControls({
     { key: 'analysis', label: 'ANLYS', title: 'Monochrome GIS Analysis' }
   ];
 
-  // In Minimal mode, auto-collapse header
-  const effectiveCollapsed = hudMode === 'minimal' ? true : isCollapsed;
-
   return (
-    <div className={`gis-controls-overlay ${effectiveCollapsed ? 'collapsed' : ''}`}>
+    <div className={`gis-controls-overlay ${isCollapsed ? 'collapsed' : ''}`}>
       {/* Module Header */}
-      <div className="gis-panel-header" onClick={() => setIsCollapsed(!effectiveCollapsed)}>
+      <div 
+        className="gis-panel-header" 
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        role="button"
+        tabIndex={0}
+        aria-expanded={!isCollapsed}
+      >
         <div className="gis-panel-title">
           <span style={{ color: 'var(--color-info)' }}>//</span>
           <span>CONTROLS</span>
         </div>
         <button
           className="gis-collapse-btn"
-          aria-label={effectiveCollapsed ? 'Expand panel' : 'Collapse panel'}
+          aria-label={isCollapsed ? 'Expand controls panel' : 'Collapse controls panel'}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsCollapsed(!isCollapsed);
+          }}
         >
-          {effectiveCollapsed ? '+' : '−'}
+          {isCollapsed ? '+' : '−'}
         </button>
       </div>
 
-      {!effectiveCollapsed && (
+      {!isCollapsed && (
         <div className="gis-panel-body">
           {/* 1. Map Style Preset Selector */}
           <div className="gis-control-section">

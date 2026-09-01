@@ -244,11 +244,11 @@ export default function GisCommandCenter({
         </div>
 
         <div className="gis-header-right">
-          <span className="gis-header-meta">SECTOR: <strong>{DEMO_META.sector}</strong></span>
+          <span className="gis-header-meta gis-header-meta-extra">SECTOR: <strong>{DEMO_META.sector}</strong></span>
           <span className="gis-header-divider">|</span>
           <span className="gis-header-meta">ROUTING: <strong style={{ color: isLiveTraffic ? 'var(--color-operational)' : 'var(--color-warning)' }}>{isLiveTraffic ? 'LIVE TOMTOM' : 'SIMULATED TRAFFIC'}</strong></span>
           <span className="gis-header-divider">|</span>
-          <span className="gis-header-meta">STYLE: <strong>{mapStyle.toUpperCase()}</strong></span>
+          <span className="gis-header-meta gis-header-meta-extra">STYLE: <strong>{mapStyle.toUpperCase()}</strong></span>
           <span className="gis-header-divider">|</span>
           <span className="gis-header-meta">MODE: <strong>{hudMode.toUpperCase()}</strong></span>
           <span className="gis-header-divider">|</span>

@@ -2,25 +2,14 @@ import React, { useState, useEffect } from 'react';
 
 /**
  * ============================================================================
- * TACTICAL SITUATIONAL TELEMETRY HUD — CASCADE-NET GIS
+ * TACTICAL SITUATIONAL TELEMETRY HUD — RESPONSIVE CASCADE-NET COMPONENT
  * ============================================================================
  * 
- * CORE RESPONSIBILITY:
- * Real-time operational situational awareness panel displaying active alerts,
- * physical road blockages, isolated mountain settlements, and rainfall severity.
- * 
- * DATA PROVENANCE & CALCULATION CONTRACTS:
- * 1. Isolated Villages Count: Dynamically derived from VillageLayer/active road state.
- *    A village is ONLY counted as isolated when all physical access roads are BLOCKED.
- *    (Heavy traffic does NOT count as isolation).
- * 2. Rainfall Severity: Meteorological 24h precipitation from weather telemetry.
- * 3. Max Risk Score: Highest active landslide susceptibility score from Rudra's AI model.
- * 4. Data Source Honesty: Displays "SIMULATED DATA / WEATHER" in demo mode.
- * 
- * RESPONSIVE DENSITY MODES:
- * - TACTICAL: Full operational telemetry readout (9 metric rows + source badge).
- * - OPERATOR: Essential disaster management metrics (6 rows).
- * - MINIMAL: Emergency headline alert counters only (3 rows).
+ * RESPONSIVE BEHAVIOR SPECIFICATION:
+ * - Desktop (>= 1200px): Full 9-row operational situation telemetry.
+ * - Tablet (768px - 1199px): 6-row focused operational telemetry.
+ * - Mobile (< 768px): Defaults to collapsed tactical summary pill.
+ *   Clicking expands a floating touch-friendly telemetry card.
  * ============================================================================
  */
 
@@ -38,23 +27,40 @@ export default function TacticalTelemetryHUD({
   hudMode = 'tactical',
   weatherSource = 'SIMULATED WEATHER'
 }) {
-  const [isCollapsed, setIsCollapsed] = useState(hudMode === 'minimal');
+  // Check if initial viewport is mobile (< 768px)
+  const isMobileInitial = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
+  const [isCollapsed, setIsCollapsed] = useState(hudMode === 'minimal' || isMobileInitial);
 
   useEffect(() => {
     if (hudMode === 'minimal') setIsCollapsed(true);
-    if (hudMode === 'tactical') setIsCollapsed(false);
-  }, [hudMode]);
+    if (hudMode === 'tactical' && !isMobileInitial) setIsCollapsed(false);
+  }, [hudMode, isMobileInitial]);
 
   return (
     <div className={`gis-telemetry-hud ${isCollapsed ? 'collapsed' : ''}`}>
-      <div className="gis-hud-header" onClick={() => setIsCollapsed(!isCollapsed)}>
+      <div 
+        className="gis-hud-header" 
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        role="button"
+        tabIndex={0}
+        aria-expanded={!isCollapsed}
+      >
         <div className="gis-hud-title">
           <span style={{ color: 'var(--color-info)' }}>//</span>
           <span>SITUATION</span>
+          {isCollapsed && (
+            <span className="gis-hud-collapsed-summary">
+              {incidentCount} INC {criticalCount > 0 ? `• ${criticalCount} CRIT` : ''} {isolatedVillagesCount > 0 ? `• ${isolatedVillagesCount} ISOL` : ''}
+            </span>
+          )}
         </div>
         <button
           className="gis-collapse-btn"
-          aria-label={isCollapsed ? 'Expand HUD' : 'Collapse HUD'}
+          aria-label={isCollapsed ? 'Expand situation HUD' : 'Collapse situation HUD'}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsCollapsed(!isCollapsed);
+          }}
         >
           {isCollapsed ? '+' : '−'}
         </button>
@@ -131,7 +137,7 @@ export default function TacticalTelemetryHUD({
               </div>
 
               {/* Row 9: Data Provenance Badge */}
-              <div className="gis-hud-row" style={{ marginTop: '2px', paddingTop: '3px', borderTop: '1px solid var(--border-subtle)' }}>
+              <div className="gis-hud-row gis-hud-provenance-row">
                 <span className="gis-hud-label" style={{ fontSize: '7.5px', color: 'var(--text-muted)' }}>TELEMETRY</span>
                 <span style={{ fontSize: '7.5px', color: 'var(--color-info)', fontFamily: 'var(--font-mono)' }}>
                   {weatherSource}
