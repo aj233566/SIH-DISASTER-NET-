@@ -1,0 +1,91 @@
+/* GIS Map Styling */
+
+.gis-map-container-wrapper {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.gis-map-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.map-legend-pills {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.map-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.legend-dot.critical { background-color: var(--critical); }
+.legend-dot.high { background-color: var(--high-risk); }
+.legend-dot.moderate { background-color: var(--warning); }
+.legend-dot.safe { background-color: var(--safe); }
+.legend-dot.shelter { background-color: var(--info); }
+.legend-dot.hospital { background-color: #ffffff; }
+
+.leaflet-map-element {
+  height: 420px;
+  width: 100%;
+  background-color: var(--bg-primary);
+  z-index: 10;
+}
+
+/* Dark Theme Filter for OpenStreetMap Tiles */
+.leaflet-tile-pane {
+  filter: brightness(0.65) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
+}
+
+/* Custom Leaflet Popup Styling */
+.leaflet-popup-content-wrapper {
+  background-color: var(--card) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-light) !important;
+  border-radius: var(--radius-sm) !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.6) !important;
+}
+
+.leaflet-popup-tip {
+  background-color: var(--card) !important;
+}
+
+.leaflet-popup-content {
+  margin: 12px 14px !important;
+  line-height: 1.4 !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
+.map-popup-card h4 {
+  font-size: 0.95rem;
+  margin: 0 0 4px;
+  color: var(--text-primary);
+}
+
+.map-popup-card p {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin: 0 0 8px;
+}

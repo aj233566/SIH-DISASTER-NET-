@@ -1,0 +1,248 @@
+/* Topbar Styling */
+.ops-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 32px;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 900;
+}
+
+@media (max-width: 991.98px) {
+  .ops-topbar {
+    padding: 12px 16px;
+  }
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.mobile-menu-btn {
+  display: none;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  padding: 6px;
+  cursor: pointer;
+}
+
+@media (max-width: 991.98px) {
+  .mobile-menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.topbar-title-section h1 {
+  font-size: 1.25rem;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.topbar-right-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Time Widget */
+.operational-time-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.clock-digits {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.5px;
+}
+
+/* Role Selector Dropdown / Pills */
+.role-selector-pill-group {
+  display: flex;
+  align-items: center;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+}
+
+.role-pill-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 5px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.role-pill-btn:hover {
+  color: var(--text-primary);
+}
+
+.role-pill-btn.active {
+  background-color: var(--elevated);
+  color: var(--text-primary);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.role-pill-btn.active.authority {
+  border-left: 2px solid var(--critical);
+}
+
+.role-pill-btn.active.fieldOfficer {
+  border-left: 2px solid var(--warning);
+}
+
+.role-pill-btn.active.citizen {
+  border-left: 2px solid var(--safe);
+}
+
+/* Language Switcher */
+.lang-switcher-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 6px 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.lang-switcher-btn:hover {
+  background-color: var(--elevated);
+  border-color: var(--border-light);
+}
+
+/* Notification Bell */
+.topbar-bell-wrapper {
+  position: relative;
+}
+
+.bell-btn {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 7px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.bell-btn:hover {
+  background-color: var(--elevated);
+}
+
+.bell-unread-dot {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background-color: var(--critical);
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  min-width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--bg-secondary);
+}
+
+/* Notification Quick Dropdown Tray */
+.notification-dropdown-tray {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 360px;
+  max-width: 90vw;
+  background-color: var(--card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+  z-index: 1100;
+  overflow: hidden;
+}
+
+.dropdown-tray-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background-color: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dropdown-tray-header h4 {
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.dropdown-tray-list {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.dropdown-item-row {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.dropdown-item-row:hover {
+  background-color: var(--elevated);
+}
+
+.dropdown-item-row.unread {
+  border-left: 3px solid var(--critical);
+  background-color: rgba(214, 69, 69, 0.04);
+}
+
+.dropdown-tray-footer {
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  background-color: var(--bg-secondary);
+  text-align: center;
+}
+
+.dropdown-tray-footer a {
+  font-size: 0.8rem;
+  color: var(--info);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.dropdown-tray-footer a:hover {
+  text-decoration: underline;
+}
