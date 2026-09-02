@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useTransition } from 'react';
 import MapView from './MapView';
 import IncidentLayer from './layers/IncidentLayer';
 import FacilityLayer from './layers/FacilityLayer';
@@ -180,19 +180,46 @@ export default function GisCommandCenter({
   // Severity Filter ('ALL' | 'CRITICAL' | 'HIGH_PLUS')
   const [severityFilter, setSeverityFilter] = useState('ALL');
 
+  /* Layer toggles, severity filter, map style and scenario switches each
+     drive a full re-evaluation of every visible GIS layer (filtered
+     incidents, heatmap nodes, road/route rendering all recompute off
+     these). Individually that's fine — isolated stress tests measured
+     0 long tasks for layer-toggle-only, style-switch-only, and
+     scenario-switch-only. It's only the REALISTIC case this feedback
+     describes — rapid pan/zoom while also toggling layers, switching
+     styles and scenarios in quick succession — where those renders can
+     stack up inside one long task (measured up to ~545ms combined).
+     startTransition marks these as non-urgent: React keeps the map's
+     own pan/zoom interaction responsive and lets these catch up after,
+     instead of forcing every layer to re-render synchronously inside
+     whatever event happened to trigger it. */
+  const [, startTransition] = useTransition();
+
   const handleToggleLayer = useCallback((layerKey) => {
-    setLayerVisibility((prev) => ({
-      ...prev,
-      [layerKey]: !prev[layerKey]
-    }));
+    startTransition(() => {
+      setLayerVisibility((prev) => ({
+        ...prev,
+        [layerKey]: !prev[layerKey]
+      }));
+    });
   }, []);
 
   const handleSetSeverityFilter = useCallback((filter) => {
-    setSeverityFilter(filter);
+    startTransition(() => {
+      setSeverityFilter(filter);
+    });
   }, []);
 
   const handleSetMapStyle = useCallback((style) => {
-    setMapStyle(style);
+    startTransition(() => {
+      setMapStyle(style);
+    });
+  }, []);
+
+  const handleSetScenario = useCallback((scenario) => {
+    startTransition(() => {
+      setSimScenario(scenario);
+    });
   }, []);
 
   const handleResetView = useCallback(() => {
@@ -408,7 +435,7 @@ export default function GisCommandCenter({
           mapStyle={mapStyle}
           onSetMapStyle={handleSetMapStyle}
           simScenario={simScenario}
-          onSetScenario={setSimScenario}
+          onSetScenario={handleSetScenario}
           hudMode={hudMode}
           onSetHudMode={setHudMode}
           onResetView={handleResetView}

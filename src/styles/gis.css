@@ -211,6 +211,59 @@ body {
   z-index: 1;
 }
 
+/* Tile-loading indicator (MapView.jsx) — a small, non-blocking readout,
+   never a full-screen cover. Already-loaded tiles stay visible underneath
+   at all times; this only tells the user a batch is still in flight,
+   which is the actual fix for "map bohot dhere dhere load ho raha hai" —
+   the map wasn't broken, it just gave no sign anything was happening
+   while OpenStreetMap's public tile servers were slow to respond. */
+.gis-map-loading-indicator {
+  position: absolute;
+  top: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 950;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: rgba(23, 28, 31, 0.92);
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+  padding: 5px 10px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+  pointer-events: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7);
+}
+
+.gis-map-loading-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--color-info);
+  animation: gis-loading-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes gis-loading-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gis-map-loading-dot {
+    animation: none;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .gis-map-loading-indicator {
+    top: auto;
+    bottom: 60px;
+  }
+}
+
 /* CARTOGRAPHIC PRESET FILTERS — REDESIGNED
    Root cause of the "washed out / gray" complaint: the previous filters
    combined extreme contrast (3.0-3.8) with very low saturation (0.10-0.25).
@@ -876,6 +929,157 @@ body {
 
 .leaflet-popup-tip {
   background: var(--bg-sidebar) !important;
+}
+
+/* =======================================================
+   9B. POPUP CONTENT — MapPopup.jsx's internal structure.
+   ROOT CAUSE FIX: MapPopup.jsx has always rendered a full
+   .gis-popup-* class tree (header/badges/meta/location/
+   description/metrics), but none of those classes had ANY
+   rule here — only the outer Leaflet chrome above did. Every
+   piece of popup text inherited the same flat 13.5px/1.45
+   line-height with no spacing between blocks, so a real
+   incident popup rendered as one dense, unstyled run-on
+   paragraph ("LandslideCRITICALStatus: Active10:40 PM...")
+   with no visual hierarchy — this is what read as a "text
+   size" / readability complaint, not an actual font-size bug.
+   ======================================================= */
+.gis-popup-card {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 11px 13px 12px;
+}
+
+.gis-popup-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.gis-popup-title {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.gis-popup-tags {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.gis-popup-type-tag {
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 2px;
+  padding: 2px 5px;
+  white-space: nowrap;
+}
+
+.gis-popup-badge {
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  border-radius: 2px;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+
+.gis-popup-badge-critical { background: rgba(214, 69, 69, 0.18); color: var(--color-critical); }
+.gis-popup-badge-high { background: rgba(217, 119, 50, 0.18); color: var(--color-high); }
+.gis-popup-badge-warning { background: rgba(201, 162, 39, 0.18); color: var(--color-warning); }
+.gis-popup-badge-operational { background: rgba(61, 139, 99, 0.18); color: var(--color-operational); }
+
+.gis-popup-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 6px 0;
+}
+
+.gis-popup-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.gis-popup-status strong {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.gis-popup-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-operational);
+  flex-shrink: 0;
+}
+
+.gis-popup-timestamp {
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.gis-popup-location {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}
+
+.gis-popup-location svg {
+  color: var(--color-info);
+  flex-shrink: 0;
+}
+
+.gis-popup-description {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.gis-popup-metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+  margin-top: 2px;
+}
+
+.gis-popup-metric-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.gis-popup-metric-label {
+  font-size: var(--fs-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--text-muted);
+}
+
+.gis-popup-metric-value {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 /* =======================================================
