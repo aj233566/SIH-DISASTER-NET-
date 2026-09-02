@@ -211,6 +211,22 @@ body {
   z-index: 1;
 }
 
+/* Leaflet's own base stylesheet sets .leaflet-container { background: #ddd }
+   — a light gray that reads as glaring white against this dark tactical
+   theme. Every square where a tile hasn't arrived yet (first paint before
+   any tile has loaded, or a newly-panned-into area waiting on a fresh
+   fetch) shows this default straight through, which is exactly the "white
+   white" patches reported. The loading indicator (MapView.jsx) tells the
+   user tiles are in flight, but never changed what color the empty space
+   underneath was. Overriding the container background to the same dark
+   land tone used elsewhere in this theme means an unloaded tile reads as
+   "part of the dark map, not yet detailed" instead of a jarring white gap
+   — tiles then visibly resolve INTO the basemap as they arrive, rather
+   than replacing a white hole. */
+.gis-map-container .leaflet-container {
+  background-color: var(--gis-land);
+}
+
 /* Tile-loading indicator (MapView.jsx) — a small, non-blocking readout,
    never a full-screen cover. Already-loaded tiles stay visible underneath
    at all times; this only tells the user a batch is still in flight,
