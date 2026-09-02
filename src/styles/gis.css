@@ -211,29 +211,46 @@ body {
   z-index: 1;
 }
 
+/* CARTOGRAPHIC PRESET FILTERS — REDESIGNED
+   Root cause of the "washed out / gray" complaint: the previous filters
+   combined extreme contrast (3.0-3.8) with very low saturation (0.10-0.25).
+   That combination crushes OSM's mid-tones toward flat gray — forests,
+   water, urban fill and contour shading all converge to nearly the same
+   shade, so there's almost nothing left for the tactical overlays (risk
+   zones, roads, routes) to visually stand out against. invert(1) is kept
+   (it's what turns OSM's light basemap dark), but contrast is brought back
+   to a normal range (1.1-1.4) and saturation is raised enough (0.35-0.65)
+   that terrain/water/urban areas stay visually distinct underneath the
+   overlays, per the "map first, basemap must remain readable" requirement. */
+
 /* PRESET 1: STANDARD */
 .gis-style-standard .gis-dark-tiles .leaflet-tile-pane {
-  filter: brightness(0.60) invert(1) contrast(3.0) hue-rotate(200deg) saturate(0.25) brightness(0.68) !important;
+  filter: invert(1) hue-rotate(200deg) brightness(0.82) contrast(1.15) saturate(0.55) !important;
 }
 
 /* PRESET 2: TACTICAL HIGH-CONTRAST */
 .gis-style-tactical .gis-dark-tiles .leaflet-tile-pane {
-  filter: brightness(0.48) invert(1) contrast(3.8) hue-rotate(195deg) saturate(0.18) brightness(0.55) !important;
+  filter: invert(1) hue-rotate(195deg) brightness(0.74) contrast(1.3) saturate(0.6) !important;
 }
 
 /* PRESET 3: NIGHT */
 .gis-style-night .gis-dark-tiles .leaflet-tile-pane {
-  filter: brightness(0.32) invert(1) contrast(3.8) hue-rotate(210deg) saturate(0.10) brightness(0.38) !important;
+  filter: invert(1) hue-rotate(210deg) brightness(0.52) contrast(1.25) saturate(0.42) !important;
 }
 
-/* PRESET 4: RISK FOCUS (Deep Dark Base — Eliminates Gray/White Washout) */
+/* PRESET 4: RISK FOCUS — deliberately a touch darker/flatter than TACTICAL
+   so the red/orange risk heatmap and hazard zones (rendered on top) read
+   as the dominant signal, without dropping to unreadable flat gray. */
 .gis-style-risk .gis-dark-tiles .leaflet-tile-pane {
-  filter: brightness(0.45) invert(1) contrast(3.4) hue-rotate(195deg) saturate(0.15) brightness(0.48) !important;
+  filter: invert(1) hue-rotate(195deg) brightness(0.62) contrast(1.25) saturate(0.4) !important;
 }
 
-/* PRESET 5: ANALYSIS */
+/* PRESET 5: ANALYSIS — intentionally monochrome (grayscale is the point of
+   this mode: it removes basemap color so severity color-coding on markers/
+   zones is the only color in the scene), but kept bright/contrasty enough
+   to stay legible rather than crushed. */
 .gis-style-analysis .gis-dark-tiles .leaflet-tile-pane {
-  filter: brightness(0.48) invert(1) contrast(3.4) grayscale(1) brightness(0.62) !important;
+  filter: invert(1) grayscale(1) brightness(0.78) contrast(1.2) !important;
 }
 
 /* =======================================================

@@ -87,6 +87,20 @@ function RiskZoneLayer({
         const isSelected = selectedRiskZoneId === zone.id;
         const style = getZoneStyle(zone.riskLevel, isSelected);
 
+        // Stable popup anchor (see MapPopup's anchorPosition doc comment):
+        // without this, selecting the zone (which restyles it a moment
+        // after the popup opens) can make Leaflet rebind the popup to the
+        // shape's default anchor instead of the click point, with no
+        // re-run of autoPan — pinning it here removes that ambiguity.
+        const zoneAnchor = zone.geometryType === 'Circle' && isValidCircle(zone.center, zone.radius)
+          ? zone.center
+          : zone.geometryType === 'Polygon' && isValidPolygon(zone.coordinates)
+            ? [
+                zone.coordinates.reduce((sum, pt) => sum + pt[0], 0) / zone.coordinates.length,
+                zone.coordinates.reduce((sum, pt) => sum + pt[1], 0) / zone.coordinates.length
+              ]
+            : null;
+
         const popupContent = (
           <MapPopup
             title={zone.name}
@@ -94,6 +108,7 @@ function RiskZoneLayer({
             severity={zone.riskLevel}
             status={zone.status || 'Active Assessment'}
             description={zone.primaryFactor ? `Primary Factor: ${zone.primaryFactor}` : null}
+            anchorPosition={zoneAnchor}
             metrics={[
               {
                 label: 'Risk Score',

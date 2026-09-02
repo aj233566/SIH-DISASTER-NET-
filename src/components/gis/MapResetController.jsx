@@ -34,6 +34,18 @@ export default function MapResetController({ resetTrigger = 0, isSimActive = fal
   // 2. Simulation State Transition: Smoothly glide camera to intervention scenario
   useEffect(() => {
     if (!isInitialMount.current) {
+      // Cancel any in-flight fitBounds/flyToBounds animation before starting a
+      // new one. Reproduced live: rapidly re-triggering the scenario switch
+      // (a real tester clicking through BASELINE/TRAFFIC SURGE/NH-10 CLEARED
+      // fast, or combining it with the RESET button) can fire this effect and
+      // effect #3 below back-to-back before a prior flyTo's animation frame
+      // loop has finished — captured one case where the map pane ended up
+      // with a corrupted multi-thousand-pixel transform and rendered blank,
+      // consistent with two overlapping flyTo interpolations. map.stop() is
+      // Leaflet's own documented way to cleanly cancel an in-progress
+      // pan/zoom animation before starting the next one; it's a no-op when
+      // nothing is animating, so this is safe to call unconditionally.
+      map.stop();
       const targetBounds = isSimActive ? SIMULATION_SCENARIO_BOUNDS : BASELINE_OPERATIONAL_BOUNDS;
       map.flyToBounds(targetBounds, {
         padding: [35, 35],
@@ -47,6 +59,8 @@ export default function MapResetController({ resetTrigger = 0, isSimActive = fal
   // 3. User Reset Trigger: Smoothly return camera to operational theater
   useEffect(() => {
     if (resetTrigger > 0) {
+      // See the map.stop() comment in effect #2 above — same reasoning.
+      map.stop();
       const targetBounds = isSimActive ? SIMULATION_SCENARIO_BOUNDS : BASELINE_OPERATIONAL_BOUNDS;
       map.flyToBounds(targetBounds, {
         padding: [30, 30],

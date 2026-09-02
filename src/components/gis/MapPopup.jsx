@@ -14,6 +14,15 @@ import { Popup } from 'react-leaflet';
  * - reportedAt: string (ISO Timestamp)
  * - metrics: Array<{ label: string, value: string | number }> (Optional extra data)
  * - onClose: callback
+ * - anchorPosition: [lat, lng] (optional) — pins the popup to an explicit,
+ *   stable point. Required for vector-layer parents (Circle/Polygon): without
+ *   it, Leaflet falls back to the shape's own default anchor (its geometric
+ *   center) whenever the popup gets rebound by a React re-render — e.g. the
+ *   very same click that opens the popup also selects the feature, which
+ *   re-renders it with different pathOptions a moment later. That rebind
+ *   does not re-run autoPan, so a shape whose center sits outside the
+ *   default map view can open on-screen and then jump off-screen. Passing a
+ *   fixed anchorPosition removes the ambiguity entirely (see RiskZoneLayer).
  */
 export default function MapPopup({
   title,
@@ -24,7 +33,8 @@ export default function MapPopup({
   description,
   reportedAt,
   metrics = [],
-  onClose
+  onClose,
+  anchorPosition
 }) {
   const getSeverityBadgeClass = (sev) => {
     switch (sev) {
@@ -51,7 +61,24 @@ export default function MapPopup({
   };
 
   return (
-    <Popup className="gis-popup-container" eventHandlers={onClose ? { remove: onClose } : undefined}>
+    <Popup
+      className="gis-popup-container"
+      autoPan
+      autoPanPaddingTopLeft={[220, 70]}
+      autoPanPaddingBottomRight={[20, 90]}
+      {...(anchorPosition ? { position: anchorPosition } : {})}
+      eventHandlers={onClose ? { remove: onClose } : undefined}
+    >
+      {/*
+        Explicit autoPan padding (not just Leaflet's [5,5] default): the header
+        (~40px) and left HUD panel (~208px wide) visually sit on top of the map
+        canvas but Leaflet only knows the raw .leaflet-container box, not that
+        this chrome covers part of it. Selecting a feature also restyles it
+        (isSelected fill/weight change), which can reshape a vector layer's
+        geometry right after autoPan's first correction and leave a popup
+        under-panned near the top/left edge — generous padding here gives
+        autoPan enough margin to still land fully on-screen despite that.
+      */}
       <div className="gis-popup-card">
         {/* Header: Title & Badges */}
         <div className="gis-popup-header">

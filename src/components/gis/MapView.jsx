@@ -25,6 +25,18 @@ export default function MapView({
         maxZoom={DEMO_MAP_CONFIG.maxZoom}
         scrollWheelZoom={true}
         zoomControl={true}
+        /* Leaflet's drag-inertia glide (the momentum panning after you
+           release a drag) defaults to inertiaMaxSpeed: Infinity — the
+           velocity computed from the last pointer-move events before
+           release is used uncapped, however large it is. Reproduced live:
+           an unusually fast drag release left the map pane's transform
+           growing on its own for several seconds with zero further input,
+           settling tens of thousands of pixels from any real location
+           (map rendered blank / at a nonsensical zoomed-out position).
+           A finite inertiaMaxSpeed bounds the worst case regardless of the
+           triggering velocity, without changing how a normal drag feels. */
+        inertiaMaxSpeed={1500}
+        inertiaDeceleration={3400}
         style={{ height: '100%', width: '100%' }}
         className={className}
       >
