@@ -1,21 +1,17 @@
 {
-  "name": "sih",
+  "name": "risk-intelligence-intervention-simulator",
   "version": "1.0.0",
-  "description": "",
-  "license": "ISC",
-  "author": "",
-  "type": "commonjs",
-  "main": "index.js",
+  "description": "CASCADE-NET Rudra module: explainable multi-disaster risk intelligence backend with temporary frontend tester.",
+  "main": "backend/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node backend/server.js",
+    "dev": "node backend/server.js",
+    "test": "node backend/tests/riskEngine.test.js"
   },
   "dependencies": {
-    "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "mongoose": "^9.9.4"
+    "express": "^4.19.2"
   },
-  "devDependencies": {
-    "nodemon": "^3.1.14"
+  "engines": {
+    "node": ">=18"
   }
 }
