@@ -1,3 +1,17 @@
+/* =======================================================
+   CASCADE-NET GIS COMMAND CENTER — STYLESHEET
+   High-Contrast Midnight Operations & Tactical Cartography
+
+   LAYOUT CONTRACT: structural layout (flex direction, column
+   grids, gap, responsive show/hide) is done with Bootstrap 5
+   utility classes in the JSX (d-flex, row/col-*, gap-*, g-*,
+   d-md-*, etc). This stylesheet only supplies the tactical
+   *look* (color, border, background, radius, type scale) plus
+   the floating-panel positioning that Bootstrap's utility API
+   has no equivalent for (anchoring a HUD panel to a map corner
+   and re-flowing it to a stacked full-width panel on mobile).
+   ======================================================= */
+
 :root {
   /* Midnight Operations Core Surface Tokens */
   --bg-app: #101416;
@@ -6,7 +20,7 @@
   --bg-elevated: #242D31;
   --border-subtle: #303B40;
   --border-accent: #4F7C8A;
-  
+
   /* Semantic Status Tokens */
   --color-critical: #D64545;
   --color-high: #D97732;
@@ -25,7 +39,7 @@
   --text-secondary: #B6C0C4;
   --text-muted: #7F8A8F;
 
-  /* Default Cartographic Surface Tokens */
+  /* Cartographic Surface Tokens */
   --gis-land: #141A1D;
   --gis-water: #1B3942;
   --gis-roads: #59656A;
@@ -34,16 +48,32 @@
 
   /* Fonts */
   --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+
+  /* =====================================================
+     TYPE SCALE — tuned per UI tier, not a blanket bump.
+     Every size below is a legible floor: nothing in the
+     tactical UI renders under 11px, and primary values/
+     headings get real visual weight.
+     ===================================================== */
+  --fs-2xs: 10px;   /* legal/attribution text only */
+  --fs-xs: 11px;    /* dense metadata, footers, HUD labels */
+  --fs-sm: 12.5px;  /* section subtitles, panel titles, badges */
+  --fs-base: 13.5px;/* buttons, dock controls, legend rows */
+  --fs-md: 15px;    /* header brand, ticker, panel body text */
+  --fs-lg: 17px;    /* HUD critical values, headings */
+  --fs-xl: 20px;    /* emphasis-only, used sparingly */
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
 }
 
 body {
+  margin: 0;
+  padding: 0;
   background-color: var(--bg-app);
   color: var(--text-primary);
   font-family: var(--font-ui);
@@ -54,36 +84,27 @@ body {
   width: 100vw;
 }
 
-/* App Wrapper Frame */
+/* App Wrapper Frame — flex direction/height come from Bootstrap
+   utilities (d-flex flex-column vh-100) applied in JSX; this rule
+   only supplies the background + establishes the positioning root. */
 .gis-app-wrapper {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  width: 100vw;
   background-color: var(--bg-app);
   position: relative;
+  min-height: 0;
 }
 
 /* =======================================================
-   1. TOP OPERATIONAL CONSOLE (34px High-Density Header)
+   1. TOP OPERATIONAL CONSOLE
    ======================================================= */
 .gis-header {
-  height: 34px;
+  min-height: 40px;
   background-color: var(--bg-sidebar);
   border-bottom: 1px solid var(--border-subtle);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 12px;
   z-index: 1000;
   user-select: none;
   font-family: var(--font-mono);
-}
-
-.gis-header-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  row-gap: 2px;
 }
 
 .gis-eoc-tag {
@@ -91,19 +112,22 @@ body {
   border: 1px solid var(--border-subtle);
   color: var(--color-info);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-2xs);
   font-weight: 700;
-  padding: 1px 6px;
+  padding: 2px 6px;
   border-radius: 2px;
   letter-spacing: 0.5px;
 }
 
 .gis-header-title {
-  font-size: 11px;
-  letter-spacing: 0.5px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  font-size: var(--fs-md);
+  letter-spacing: 0.3px;
+  min-width: 0;
+}
+
+.gis-header-title > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .gis-brand-name {
@@ -113,122 +137,117 @@ body {
 
 /* Centered Top Status Ticker */
 .gis-header-ticker {
-  display: flex;
-  align-items: center;
-  gap: 7px;
   background-color: var(--bg-card);
   border: 1px solid var(--border-subtle);
-  border-radius: 3px;
-  padding: 2px 12px;
-  font-size: 10px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: var(--fs-sm);
   font-family: var(--font-mono);
-  letter-spacing: 0.3px;
+  max-width: 460px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .gis-ticker-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: var(--color-warning);
-  transition: background-color 0.2s ease;
+  background-color: var(--color-critical);
+  flex-shrink: 0;
 }
 
-.gis-ticker-dot.active {
-  background-color: var(--color-operational);
+.gis-ticker-dot.live-pulse {
+  background-color: var(--color-critical);
+  box-shadow: 0 0 6px var(--color-critical);
+  animation: gisPulse 1.8s infinite;
+}
+
+@keyframes gisPulse {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 8px var(--color-critical); }
+  100% { transform: scale(0.95); opacity: 0.8; }
 }
 
 .gis-ticker-text {
   color: var(--text-secondary);
-}
-
-.gis-ticker-text strong {
-  color: var(--text-primary);
+  letter-spacing: 0.2px;
 }
 
 .gis-header-meta {
-  font-size: 9.5px;
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+
+.gis-meta-live {
+  color: var(--color-operational);
+  font-weight: 700;
+}
+
+.gis-meta-sim {
+  color: var(--color-warning);
+  font-weight: 700;
 }
 
 /* =======================================================
-   2. FULL-SCREEN TACTICAL MAP CANVAS (5 MAP STYLE PRESETS)
+   2. MAP VIEWPORT CONTAINER & CARTOGRAPHIC PRESETS
    ======================================================= */
 .gis-workspace {
-  flex: 1;
   position: relative;
   width: 100%;
-  height: calc(100vh - 34px);
-  background-color: var(--gis-land);
-  transition: background-color 0.3s ease;
+  min-height: 0;
+  overflow: hidden;
+  background-color: var(--bg-app);
 }
 
 .gis-map-container {
   width: 100%;
   height: 100%;
-  background-color: var(--gis-land);
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
 }
 
-/* Cartographic Tile Pane Filter Transitions */
-.gis-dark-tiles .leaflet-tile-pane {
-  transition: filter 0.35s ease;
-}
-
-/* PRESET 1: STANDARD (Institutional Midnight Operations - Blue-Slate) */
+/* PRESET 1: STANDARD */
 .gis-style-standard .gis-dark-tiles .leaflet-tile-pane {
-  filter: brightness(0.68) invert(1) contrast(3.0) hue-rotate(205deg) saturate(0.25) brightness(0.72) !important;
-}
-.gis-style-standard {
-  --gis-land: #141A1D;
+  filter: brightness(0.60) invert(1) contrast(3.0) hue-rotate(200deg) saturate(0.25) brightness(0.68) !important;
 }
 
-/* PRESET 2: TACTICAL (High-Contrast Tactical Command Center - Crisp Roads) */
+/* PRESET 2: TACTICAL HIGH-CONTRAST */
 .gis-style-tactical .gis-dark-tiles .leaflet-tile-pane {
-  filter: brightness(0.55) invert(1) contrast(3.6) hue-rotate(195deg) saturate(0.35) brightness(0.80) !important;
-}
-.gis-style-tactical {
-  --gis-land: #101518;
+  filter: brightness(0.48) invert(1) contrast(3.8) hue-rotate(195deg) saturate(0.18) brightness(0.55) !important;
 }
 
-/* PRESET 3: NIGHT OPS (Deep Charcoal & Muted Teal Night Ops) */
+/* PRESET 3: NIGHT */
 .gis-style-night .gis-dark-tiles .leaflet-tile-pane {
-  filter: brightness(0.38) invert(1) contrast(4.2) hue-rotate(160deg) saturate(0.45) brightness(0.55) !important;
-}
-.gis-style-night {
-  --gis-land: #080B0D;
+  filter: brightness(0.32) invert(1) contrast(3.8) hue-rotate(210deg) saturate(0.10) brightness(0.38) !important;
 }
 
-/* PRESET 4: RISK FOCUS (Ultra-Muted Geography - Maximum Hazard Isolation) */
+/* PRESET 4: RISK FOCUS (Deep Dark Base — Eliminates Gray/White Washout) */
 .gis-style-risk .gis-dark-tiles .leaflet-tile-pane {
-  filter: brightness(0.36) invert(1) contrast(4.5) hue-rotate(220deg) saturate(0.06) brightness(0.45) !important;
-}
-.gis-style-risk {
-  --gis-land: #0A0C0E;
+  filter: brightness(0.45) invert(1) contrast(3.4) hue-rotate(195deg) saturate(0.15) brightness(0.48) !important;
 }
 
-/* PRESET 5: ANALYSIS (100% Monochrome Neutral Grayscale for GIS Vector Inspection) */
+/* PRESET 5: ANALYSIS */
 .gis-style-analysis .gis-dark-tiles .leaflet-tile-pane {
-  filter: brightness(0.48) invert(1) contrast(3.4) grayscale(1) brightness(0.65) !important;
-}
-.gis-style-analysis {
-  --gis-land: #111315;
+  filter: brightness(0.48) invert(1) contrast(3.4) grayscale(1) brightness(0.62) !important;
 }
 
 /* =======================================================
-   3. LEAFLET CONTROL SAFE-ZONE STYLING (COLLISION FIX)
+   3. LEAFLET ZOOM CONTROLS (Top-Left Precision Sizing)
    ======================================================= */
 .leaflet-top.leaflet-left {
   top: 8px !important;
   left: 8px !important;
-  z-index: 1000 !important;
+  z-index: 999 !important;
 }
 
 .leaflet-control-zoom {
   border: 1px solid var(--border-subtle) !important;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.85) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.85) !important;
   border-radius: 3px !important;
   overflow: hidden;
   margin: 0 !important;
@@ -238,11 +257,10 @@ body {
   background-color: var(--bg-sidebar) !important;
   color: var(--text-primary) !important;
   border-bottom: 1px solid var(--border-subtle) !important;
-  width: 28px !important;
-  height: 28px !important;
-  line-height: 27px !important;
-  font-size: 14px !important;
-  transition: all 0.15s ease !important;
+  width: 30px !important;
+  height: 30px !important;
+  line-height: 29px !important;
+  font-size: var(--fs-lg) !important;
 }
 
 .leaflet-control-zoom a:last-child {
@@ -257,9 +275,9 @@ body {
 .leaflet-control-attribution {
   background: var(--bg-sidebar) !important;
   color: var(--text-muted) !important;
-  font-size: 8.5px !important;
-  padding: 1px 6px !important;
-  border-top-left-radius: 3px;
+  font-size: var(--fs-2xs) !important;
+  padding: 2px 6px !important;
+  border-top-left-radius: 2px;
   border: 1px solid var(--border-subtle) !important;
   border-bottom: none !important;
   border-right: none !important;
@@ -272,62 +290,155 @@ body {
 }
 
 /* =======================================================
-   4. LEFT SITUATION TELEMETRY HUD (Tactical Module)
+   4. FLOATING TACTICAL PANELS — shared shell
+   (.gis-panel-header / .gis-panel-title / .gis-collapse-btn
+   are reused across the HUD, Controls and Legend panels)
    ======================================================= */
-.gis-telemetry-hud {
+.gis-telemetry-hud,
+.gis-controls-overlay,
+.gis-legend-overlay {
   position: absolute;
-  top: 72px; /* Safe clearance below Leaflet zoom control */
-  left: 8px;
-  z-index: 1000;
-  background-color: var(--bg-sidebar);
+  z-index: 900;
+  background-color: rgba(23, 28, 31, 0.94);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--border-subtle);
   border-radius: 3px;
-  width: 200px;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.9);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.85);
   overflow: hidden;
-  transition: width 0.2s ease, opacity 0.2s ease;
+  max-height: calc(100% - 16px);
+  transition: width 0.18s ease, opacity 0.18s ease;
+  /* ROOT-CAUSE FIX for silent HUD text clipping at short viewports
+     (e.g. 1024x768, 1280x800): this panel's max-height (above, and
+     overridden per-panel/per-breakpoint below) is the ONE real height
+     budget. Previously .gis-panel-body also carried its own, much
+     larger, independent max-height (calc(80vh - 40px)) with its own
+     overflow-y:auto — so at a short viewport the body's content fit
+     comfortably under ITS OWN budget and never engaged its scrollbar,
+     while THIS element's overflow:hidden silently chopped off whatever
+     stuck out past ITS smaller budget, with no scroll affordance
+     anywhere. Making this a flex column with the header fixed-size and
+     the body as the flexible, scrollable remainder means there is only
+     one budget, and the body (which actually has overflow-y:auto) is
+     always the element that scrolls when content doesn't fit — nothing
+     is ever lost invisibly. Do not reintroduce a separate max-height on
+     .gis-panel-body; that recreates this exact bug. */
+  display: flex;
+  flex-direction: column;
+}
+
+.gis-telemetry-hud {
+  top: 8px;
+  left: 8px;
+  width: 208px;
+  /* Top-anchored HUD and the bottom-anchored Legend (below) share this
+     same left column. With a readable type scale both panels' natural
+     content height can exceed half the viewport, so each is explicitly
+     capped and independently scrollable — otherwise they overlap on any
+     viewport, not just short/landscape ones (verified: they DID overlap
+     at 1440x900 before this cap was added). 42% + 38% + margins < 100%
+     guarantees a gap between them at every tested viewport height.
+     The 380px floor (via max()) exists because the HUD's 8 rows + footer
+     need ~373px to render with zero scrolling; on viewports around
+     700-900px tall, 42vh alone (e.g. 322px at 768px height) is narrower
+     than that, which used to force a scroll for content that should
+     just fit. 380px was verified (1024x768, 1280x800) to still leave a
+     positive gap above the Legend panel below it — see the Legend
+     comment for the matching gap check. */
+  max-height: min(max(42vh, 380px), calc(100% - 16px));
 }
 
 .gis-telemetry-hud.collapsed {
-  width: 120px;
+  width: 128px;
 }
 
-.gis-hud-header {
-  padding: 5px 8px;
+.gis-controls-overlay {
+  top: 8px;
+  right: 8px;
+  width: 190px;
+}
+
+.gis-controls-overlay.collapsed {
+  width: 100px !important;
+}
+
+.gis-legend-overlay {
+  bottom: 8px;
+  left: 8px;
+  width: 178px;
+  /* See .gis-telemetry-hud comment above: capped so it can never grow
+     tall enough to collide with the HUD anchored above it. */
+  max-height: min(38vh, calc(100% - 16px));
+}
+
+.gis-legend-overlay.collapsed {
+  width: 96px !important;
+}
+
+.gis-panel-header {
+  padding: 6px 8px;
   background-color: var(--bg-card);
   border-bottom: 1px solid var(--border-subtle);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   cursor: pointer;
   user-select: none;
+  min-height: 30px;
+  flex-shrink: 0;
 }
 
+.gis-panel-title,
 .gis-hud-title {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 9.5px;
+  min-width: 0;
+  font-size: var(--fs-sm);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   color: var(--text-primary);
   font-family: var(--font-mono);
 }
 
-.gis-hud-body {
-  padding: 6px 9px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
+.gis-hud-collapsed-summary {
+  font-size: var(--fs-xs);
+  color: var(--color-warning);
+  white-space: nowrap;
 }
 
+.gis-collapse-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: var(--fs-lg);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px 6px;
+  min-width: 26px;
+  min-height: 26px;
+  flex-shrink: 0;
+}
+
+.gis-collapse-btn:hover {
+  color: var(--text-primary);
+}
+
+.gis-panel-body {
+  padding: 8px;
+  overflow-y: auto;
+  /* Sized by flex (see parent comment), not by its own max-height:
+     it gets exactly whatever space is left inside the parent panel's
+     real budget and scrolls internally if content still doesn't fit. */
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* =======================================================
+   5. LEFT SITUATION TELEMETRY HUD (body content)
+   ======================================================= */
 .gis-hud-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   padding: 3px 0;
-  border-bottom: 1px solid rgba(48, 59, 64, 0.45);
+  border-bottom: 1px solid rgba(48, 59, 64, 0.35);
+  gap: 8px;
+  min-width: 0;
 }
 
 .gis-hud-row:last-child {
@@ -335,1032 +446,548 @@ body {
 }
 
 .gis-hud-label {
-  font-size: 8.5px;
+  font-size: var(--fs-xs);
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.3px;
   color: var(--text-muted);
   font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .gis-hud-val {
-  font-size: 11.5px;
+  font-size: var(--fs-lg);
   font-weight: 700;
   font-family: var(--font-mono);
   color: var(--text-primary);
+  text-align: right;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.gis-hud-val.critical {
-  color: var(--color-critical);
-}
+.gis-hud-val.critical { color: var(--color-critical); }
+.gis-hud-val.operational { color: var(--color-operational); }
+.gis-hud-val.warning { color: var(--color-warning); }
 
-.gis-hud-val.operational {
-  color: var(--color-operational);
-}
-
-.gis-hud-val.warning {
-  color: var(--color-warning);
+.gis-hud-footer {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--fs-2xs);
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  text-align: center;
 }
 
 /* =======================================================
-   5. RIGHT OPERATIONAL CONTROL RAIL (Tactical Module)
+   6. RIGHT OPERATIONAL CONTROL RAIL (body content)
    ======================================================= */
-.gis-controls-overlay {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 1000;
-  background-color: var(--bg-sidebar);
-  border: 1px solid var(--border-subtle);
-  border-radius: 3px;
-  width: 205px;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.9);
-  overflow: hidden;
-  transition: width 0.2s ease, opacity 0.2s ease;
+.gis-section-subtitle {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-family: var(--font-mono);
 }
 
-.gis-controls-overlay.collapsed {
-  width: 120px;
-}
-
-.gis-panel-header {
-  padding: 5px 8px;
+.gis-btn-compact {
   background-color: var(--bg-card);
-  border-bottom: 1px solid var(--border-subtle);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  padding: 5px 6px;
+  min-height: 28px;
+  border-radius: 2px;
   cursor: pointer;
+  transition: all 0.12s ease;
   user-select: none;
 }
 
-.gis-panel-title {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 9.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.gis-btn-compact:hover {
+  background-color: var(--bg-elevated);
   color: var(--text-primary);
-  font-family: var(--font-mono);
+  border-color: var(--border-accent);
 }
 
-.gis-collapse-btn {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.gis-panel-body {
-  padding: 6px 9px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-height: calc(100vh - 130px);
-  overflow-y: auto;
-}
-
-.gis-control-section {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.gis-section-label {
-  font-size: 8.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-}
-
-/* Map Style Selector Pills */
-.gis-style-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 2px;
-}
-
-.gis-style-pill {
-  padding: 3px 2px;
-  border-radius: 2px;
-  border: 1px solid var(--border-subtle);
-  background-color: var(--bg-card);
-  color: var(--text-muted);
-  font-size: 8px;
-  font-weight: 700;
-  cursor: pointer;
-  text-align: center;
-  transition: all 0.12s ease;
-  font-family: var(--font-mono);
-}
-
-.gis-style-pill.active {
+.gis-btn-compact.active {
   background-color: var(--bg-elevated);
   border-color: var(--color-info);
-  color: var(--color-info);
-}
-
-.gis-toggles-grid-2col {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 3px;
-}
-
-.gis-toggle-pill-tactical {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 4px 6px;
-  border-radius: 2px;
-  border: 1px solid var(--border-subtle);
-  background-color: var(--bg-card);
-  color: var(--text-muted);
-  font-size: 9.5px;
-  font-weight: 700;
-  font-family: var(--font-mono);
-  cursor: pointer;
-  text-align: center;
-  transition: all 0.12s ease;
-}
-
-.gis-toggle-pill-tactical.is-active {
-  background-color: var(--bg-elevated);
-  border-color: var(--color-selected);
   color: var(--text-primary);
 }
 
-.gis-toggle-dot-sm {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background-color: var(--border-subtle);
-}
-
-.gis-toggle-pill-tactical.is-active .gis-toggle-dot-sm {
-  background-color: var(--color-selected);
-}
-
-.gis-filter-group {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2px;
-}
-
-.gis-filter-pill {
-  padding: 3px 5px;
-  border-radius: 2px;
-  border: 1px solid var(--border-subtle);
-  background-color: var(--bg-card);
-  color: var(--text-muted);
-  font-size: 8.5px;
-  font-weight: 700;
-  cursor: pointer;
-  text-align: center;
-  transition: all 0.12s ease;
-  font-family: var(--font-mono);
-}
-
-.gis-filter-pill.active {
-  background-color: var(--bg-elevated);
-  border-color: var(--color-warning);
-  color: var(--color-warning);
-}
-
-.gis-reset-btn {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 5px 8px;
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: 2px;
-  color: var(--text-primary);
-  font-size: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.12s ease;
-  font-family: var(--font-ui);
-}
-
-.gis-reset-btn:hover {
-  background-color: var(--bg-elevated);
-  border-color: var(--color-info);
-}
-
-/* =======================================================
-   6. BOTTOM-LEFT MAP LEGEND (Minimal Tactical Panel)
-   ======================================================= */
-.gis-legend-overlay {
-  position: absolute;
-  bottom: 8px;
-  left: 8px;
-  z-index: 1000;
-  background-color: var(--bg-sidebar);
-  border: 1px solid var(--border-subtle);
-  border-radius: 3px;
-  width: 185px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.85);
-  overflow: hidden;
-}
-
-.gis-legend-overlay.collapsed {
-  width: 110px;
-}
-
-.gis-legend-section {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.gis-legend-items {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.gis-legend-row {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 9px;
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-}
-
-.gis-legend-dot {
+.gis-indicator-dot {
   width: 5px;
   height: 5px;
   border-radius: 50%;
+  background-color: var(--color-disabled);
+  flex-shrink: 0;
 }
 
-.gis-legend-dot.critical-pulse {
-  background-color: var(--color-critical);
-}
-
-.gis-legend-dot.high {
-  background-color: var(--color-high);
-}
-
-.gis-legend-dot.warning {
-  background-color: var(--color-warning);
-}
-
-.gis-legend-dot.operational {
+.gis-btn-compact.active .gis-indicator-dot {
   background-color: var(--color-operational);
+  box-shadow: 0 0 4px var(--color-operational);
 }
 
-.gis-legend-icon-badge {
-  width: 12px;
-  height: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 2px;
-  font-size: 8px;
+.gis-btn-filter {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
   font-weight: 700;
-  background-color: var(--bg-app);
-}
-
-.gis-legend-icon-badge.incident {
-  border: 1px solid var(--color-critical);
-  color: var(--color-critical);
-}
-
-.gis-legend-icon-badge.hospital {
-  border: 1px solid var(--color-primary);
-  color: var(--color-primary);
-}
-
-.gis-legend-icon-badge.shelter {
-  border: 1px solid var(--color-operational);
-  color: var(--color-operational);
-}
-
-.gis-legend-icon-badge.resource {
-  border: 1px solid var(--color-high);
-  color: var(--color-high);
-}
-
-.gis-legend-line {
-  width: 14px;
-  height: 2.5px;
-  border-radius: 1px;
-}
-
-.gis-legend-line.connected {
-  background-color: var(--color-operational);
-}
-
-.gis-legend-line.blocked {
-  background-color: var(--color-critical);
-}
-
-.gis-legend-line.flooded {
-  background-color: var(--color-info);
-  border-bottom: 1px dashed var(--text-primary);
-}
-
-.gis-legend-line.restricted {
-  background-color: var(--color-warning);
-}
-
-.gis-legend-line.primary-route {
-  background-color: var(--color-primary);
-  height: 3px;
-}
-
-.gis-legend-poly.risk-zone {
-  width: 12px;
-  height: 8px;
-  background-color: var(--bg-elevated);
-  border: 1px dashed var(--color-critical);
+  font-family: var(--font-mono);
+  padding: 5px 0;
+  min-height: 26px;
+  text-align: center;
   border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.gis-btn-filter.active {
+  background-color: var(--color-critical);
+  border-color: var(--color-critical);
+  color: #FFFFFF;
+}
+
+.gis-style-pill {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  padding: 5px 2px;
+  min-height: 26px;
+  text-align: center;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.gis-style-pill.active {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #FFFFFF;
+}
+
+.gis-btn-reset-full {
+  width: 100%;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  color: var(--color-info);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  padding: 6px 0;
+  min-height: 30px;
+  text-align: center;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.gis-btn-reset-full:hover {
+  background-color: var(--bg-elevated);
+  border-color: var(--color-info);
+  color: #FFFFFF;
 }
 
 /* =======================================================
-   7. FLOATING BOTTOM COMMAND DOCK (Tactical Control Console)
+   7. FLOATING COMMAND DOCK (Bottom-Center)
    ======================================================= */
 .gis-floating-dock {
   position: absolute;
   bottom: 8px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 1000;
-  background-color: var(--bg-sidebar);
+  z-index: 900;
+  background-color: rgba(23, 28, 31, 0.94);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--border-subtle);
-  border-radius: 3px;
-  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.92);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 4px 12px;
+  border-radius: 16px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.9);
+  padding: 6px 14px;
+  min-height: 40px;
+  max-width: min(94vw, 900px);
   user-select: none;
   font-family: var(--font-mono);
 }
 
-.gis-dock-section {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.gis-dock-meta-section {
+  border-right: 1px solid var(--border-subtle);
+  padding-right: 10px;
 }
 
-.gis-dock-telemetry-text {
-  font-size: 9.5px;
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.gis-dock-button-group {
-  display: flex;
-  align-items: center;
-  gap: 2px;
+.gis-dock-sector-badge {
   background-color: var(--bg-card);
   border: 1px solid var(--border-subtle);
+  color: var(--color-info);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  padding: 2px 6px;
   border-radius: 2px;
-  padding: 1px;
+  white-space: nowrap;
+}
+
+.gis-dock-coords {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.gis-dock-status-dot-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--color-operational);
+  box-shadow: 0 0 4px var(--color-operational);
+  flex-shrink: 0;
+}
+
+.gis-dock-sim-section {
+  border-right: 1px solid var(--border-subtle);
+  padding-right: 10px;
+}
+
+.gis-dock-section-title {
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .gis-dock-btn {
-  padding: 3px 8px;
-  border-radius: 2px;
-  font-size: 8.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  border: 1px solid transparent;
-  background-color: transparent;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
   color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  padding: 5px 9px;
+  min-height: 28px;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.12s ease;
-  font-family: var(--font-mono);
+  white-space: nowrap;
 }
 
 .gis-dock-btn:hover {
+  background-color: var(--bg-elevated);
   color: var(--text-primary);
 }
 
 .gis-dock-btn.is-active {
   background-color: var(--bg-elevated);
-  border-color: var(--color-selected);
-  color: var(--color-selected);
+  border-color: var(--color-info);
+  color: var(--text-primary);
 }
 
 .gis-dock-btn.is-active-sim {
-  background-color: var(--bg-elevated);
+  background-color: var(--color-operational);
   border-color: var(--color-operational);
-  color: var(--color-operational);
+  color: #FFFFFF;
 }
 
-.gis-dock-reset-btn {
-  padding: 3px 8px;
-  border-radius: 2px;
-  font-size: 8.5px;
+.gis-dock-btn-reset {
+  color: var(--color-info);
+  border-color: var(--border-accent);
+}
+
+/* =======================================================
+   8. BOTTOM-LEFT MAP LEGEND (body content)
+   ======================================================= */
+.gis-legend-section + .gis-legend-section {
+  margin-top: 8px;
+}
+
+.gis-section-label {
+  font-size: var(--fs-xs);
   font-weight: 700;
-  border: 1px solid var(--border-subtle);
-  background-color: var(--bg-card);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-family: var(--font-mono);
+  margin-bottom: 4px;
+}
+
+.gis-legend-row {
+  font-size: var(--fs-base);
   color: var(--text-secondary);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  transition: all 0.12s ease;
-  font-family: var(--font-mono);
+  padding: 2px 0;
+  min-width: 0;
 }
 
-.gis-dock-reset-btn:hover {
-  background-color: var(--bg-elevated);
-  color: var(--text-primary);
-  border-color: var(--color-info);
+.gis-legend-row > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gis-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background-color: var(--color-warning);
+}
+
+.gis-legend-dot.critical-pulse { background-color: var(--color-critical); }
+.gis-legend-dot.high { background-color: var(--color-high); }
+.gis-legend-dot.warning { background-color: var(--color-warning); }
+.gis-legend-dot.operational { background-color: var(--color-operational); }
+
+.gis-legend-icon-badge {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-2xs);
+  border-radius: 3px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+}
+
+.gis-legend-icon-badge.incident { color: var(--color-critical); border-color: var(--color-critical); }
+.gis-legend-icon-badge.village { color: var(--color-warning); }
+.gis-legend-icon-badge.hospital { color: var(--color-primary); }
+.gis-legend-icon-badge.shelter { color: var(--color-operational); }
+.gis-legend-icon-badge.resource { color: var(--text-secondary); }
+
+.gis-legend-line {
+  width: 18px;
+  height: 3px;
+  flex-shrink: 0;
+  border-radius: 2px;
+}
+
+.gis-legend-line.connected { background-color: var(--color-operational); }
+.gis-legend-line.restricted { background-color: var(--color-high); }
+.gis-legend-line.blocked { background-color: var(--color-critical); }
+.gis-legend-line.primary-route { background-color: var(--color-primary); }
+
+.gis-legend-poly {
+  width: 14px;
+  height: 10px;
+  flex-shrink: 0;
+  border-radius: 2px;
+  border: 1.5px dashed var(--color-critical);
+  background-color: rgba(214, 69, 69, 0.25);
 }
 
 /* =======================================================
-   8. IN-MAP TACTICAL LABELS (Spatial Intelligence Readouts)
+   9. TACTICAL MAP BADGES & POPUP SPECIFICATIONS
    ======================================================= */
-.gis-tactical-label-permanent {
-  background-color: var(--bg-app) !important;
-  color: var(--text-primary) !important;
-  border: 1px solid var(--border-subtle) !important;
-  border-radius: 3px !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.95) !important;
-  padding: 3px 8px !important;
-  font-size: 11px !important;
-  font-family: var(--font-mono) !important;
-  letter-spacing: 0.35px !important;
-  font-weight: 700 !important;
-  white-space: nowrap !important;
-  line-height: 1.35 !important;
-}
-
-.gis-tactical-label-permanent::before {
-  display: none !important;
-}
-
-.gis-tactical-label-permanent.critical-label {
-  border-color: var(--color-critical) !important;
-  color: var(--color-critical) !important;
-}
-
-.gis-tactical-label-permanent.route-label {
-  border-color: var(--color-primary) !important;
-  color: var(--text-primary) !important;
-}
-
-.gis-tactical-label-permanent.restored-label {
-  border-color: var(--color-operational) !important;
-  color: var(--color-operational) !important;
-}
-
+.leaflet-tooltip,
+.gis-tactical-label-permanent,
 .gis-tactical-tooltip-contextual {
-  background-color: var(--bg-card) !important;
-  color: var(--text-primary) !important;
+  background: rgba(16, 20, 22, 0.95) !important;
   border: 1px solid var(--border-subtle) !important;
-  border-radius: 2px !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.75) !important;
-  padding: 2px 6px !important;
-  font-size: 9.5px !important;
+  color: var(--text-primary) !important;
   font-family: var(--font-mono) !important;
+  font-size: var(--fs-xs) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.2px !important;
+  padding: 3px 6px !important;
+  border-radius: 2px !important;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.9) !important;
+  white-space: nowrap !important;
 }
 
-.gis-tactical-tooltip-contextual::before {
-  display: none !important;
+/* Arrow styling override */
+.leaflet-tooltip-top:before {
+  border-top-color: var(--border-subtle) !important;
+}
+.leaflet-tooltip-bottom:before {
+  border-bottom-color: var(--border-subtle) !important;
+}
+.leaflet-tooltip-left:before {
+  border-left-color: var(--border-subtle) !important;
+}
+.leaflet-tooltip-right:before {
+  border-right-color: var(--border-subtle) !important;
 }
 
-/* Marker Base */
-.gis-custom-icon {
-  background: transparent !important;
-  border: none !important;
+/* Semantic Badge Variants */
+.critical-label, .leaflet-tooltip.critical-label {
+  border-color: var(--color-critical) !important;
+  color: #FFAAAA !important;
+  box-shadow: 0 0 8px rgba(214, 69, 69, 0.4) !important;
 }
 
-.gis-marker-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
+.blocked-road-label, .leaflet-tooltip.blocked-road-label {
+  border-color: var(--color-critical) !important;
+  color: #FFAAAA !important;
 }
 
-.gis-marker-badge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  border: 2px solid currentColor;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
-  transition: transform 0.12s ease;
-  cursor: pointer;
+.warning-label, .leaflet-tooltip.warning-label {
+  border-color: var(--color-warning) !important;
+  color: #FFE58F !important;
 }
 
-.gis-marker-badge:hover {
-  transform: scale(1.1);
+.primary-route-label, .leaflet-tooltip.primary-route-label {
+  border-color: var(--color-primary) !important;
+  color: #93C5FD !important;
 }
 
-.gis-marker-wrapper.is-selected .gis-marker-badge {
-  transform: scale(1.15);
-  box-shadow: 0 0 0 2px #F2F4F5;
+.facility-label, .leaflet-tooltip.facility-label {
+  border-color: var(--color-operational) !important;
+  color: #A7F3D0 !important;
 }
 
-.gis-marker-badge.facility-hospital {
-  border-radius: 3px;
-}
-
-.gis-marker-badge.facility-shelter {
-  border-radius: 5px;
-}
-
-.gis-marker-badge.resource-badge {
-  border-radius: 3px;
-}
-
-.gis-marker-badge.waypoint-badge {
-  border-radius: 3px;
-  font-family: var(--font-mono);
-}
-
-.gis-marker-pulse {
-  position: absolute;
-  top: -4px;
-  left: -4px;
-  right: -4px;
-  bottom: -4px;
-  border-radius: 50%;
-  border: 1.5px solid var(--color-critical);
-  animation: marker-pulse-anim 1.8s cubic-bezier(0.24, 0, 0.38, 1) infinite;
-  pointer-events: none;
-}
-
-@keyframes marker-pulse-anim {
-  0% {
-    transform: scale(0.85);
-    opacity: 0.9;
-  }
-  70% {
-    transform: scale(1.4);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(1.4);
-    opacity: 0;
-  }
-}
-
-/* =======================================================
-   9. POPUP DIALOGS (Compact Operational Cards)
-   ======================================================= */
 .leaflet-popup-content-wrapper {
-  background: var(--bg-card) !important;
-  color: var(--text-primary) !important;
+  background: var(--bg-sidebar) !important;
   border: 1px solid var(--border-subtle) !important;
-  border-radius: 3px !important;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.85) !important;
+  border-radius: 4px !important;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.95) !important;
   padding: 0 !important;
+  color: var(--text-primary) !important;
+  max-width: min(280px, calc(100vw - 28px)) !important;
+  font-size: var(--fs-base) !important;
 }
 
 .leaflet-popup-content {
   margin: 0 !important;
-  line-height: 1.35 !important;
-  min-width: 240px;
-  max-width: 280px;
+  line-height: 1.45 !important;
 }
 
 .leaflet-popup-tip {
-  background: var(--bg-card) !important;
-  border: 1px solid var(--border-subtle) !important;
+  background: var(--bg-sidebar) !important;
 }
 
-.leaflet-popup-close-button {
-  color: var(--text-muted) !important;
-  padding: 4px 6px 0 0 !important;
-  font-size: 13px !important;
-}
+/* =======================================================
+   10. RESPONSIVE BREAKPOINTS — floating-panel repositioning
+   only. Everything Bootstrap's utility classes can express
+   (show/hide, direction, wrap, spacing) is handled in JSX via
+   d-*, flex-*, row-cols-*, gap-* and their responsive variants;
+   these media queries exist solely because Bootstrap has no
+   utility for "become a docked overlay vs. a stacked full-width
+   panel", which is inherent to this tactical HUD-over-map shell.
+   Breakpoints intentionally mirror Bootstrap 5 (sm 576 / md 768
+   / lg 992 / xl 1200) so JSX and CSS agree on the same steps.
+   ======================================================= */
 
-.leaflet-popup-close-button:hover {
-  color: var(--text-primary) !important;
-}
-
-.gis-popup-card {
-  padding: 8px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.gis-popup-header {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  border-bottom: 1px solid var(--border-subtle);
-  padding-bottom: 4px;
-}
-
-.gis-popup-title {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-primary);
-  line-height: 1.3;
-}
-
-.gis-popup-tags {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.gis-popup-type-tag {
-  font-size: 8px;
-  padding: 1px 4px;
-  border-radius: 2px;
-  background-color: var(--bg-elevated);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-subtle);
-  font-family: var(--font-mono);
-}
-
-.gis-popup-badge {
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.4px;
-  padding: 1px 4px;
-  border-radius: 2px;
-}
-
-.gis-popup-badge-critical {
-  background-color: var(--bg-elevated);
-  color: var(--color-critical);
-  border: 1px solid var(--color-critical);
-}
-
-.gis-popup-badge-high {
-  background-color: var(--bg-elevated);
-  color: var(--color-high);
-  border: 1px solid var(--color-high);
-}
-
-.gis-popup-badge-warning {
-  background-color: var(--bg-elevated);
-  color: var(--color-warning);
-  border: 1px solid var(--color-warning);
-}
-
-.gis-popup-badge-operational {
-  background-color: var(--bg-elevated);
-  color: var(--color-operational);
-  border: 1px solid var(--color-operational);
-}
-
-.gis-popup-meta-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 9px;
-  color: var(--text-muted);
-}
-
-.gis-popup-status {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--text-secondary);
-}
-
-.gis-popup-status-dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background-color: var(--color-operational);
-}
-
-.gis-popup-timestamp {
-  font-family: var(--font-mono);
-  font-size: 8px;
-}
-
-.gis-popup-location {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 9px;
-  color: var(--color-info);
-  font-family: var(--font-mono);
-}
-
-.gis-popup-description {
-  font-size: 10px;
-  line-height: 1.3;
-  color: var(--text-secondary);
-  background: var(--bg-elevated);
-  padding: 4px 6px;
-  border-radius: 2px;
-  border: 1px solid var(--border-subtle);
-}
-
-.gis-popup-metrics-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 3px;
-  margin-top: 1px;
-}
-
-.gis-popup-metric-cell {
-  background: var(--bg-elevated);
-  padding: 3px 4px;
-  border-radius: 2px;
-  border: 1px solid var(--border-subtle);
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.gis-popup-metric-label {
-  font-size: 7.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: var(--text-muted);
-}
-
-.gis-popup-metric-value {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-}
-
-/* ============================================================================
-   9. BOOTSTRAP-ALIGNED RESPONSIVE SYSTEM (Desktop, Tablet, Mobile)
-   ============================================================================
-   
-   RESPONSIVE ARCHITECTURE & DESIGN RATIONALE:
-   ----------------------------------------------------------------------------
-   1. DESKTOP (>= 1200px):
-      - Preserves high-density dual-rail operational command center layout.
-      - Map remains 100% dominant; Left HUD (175px) + Right Controls (190px)
-        provide simultaneous telemetric awareness and layer switching.
-   
-   2. TABLET (768px - 1199.98px):
-      - Compresses HUD to 155px and Controls to 170px to preserve center
-        operating surface for geospatial analysis.
-      - Hides non-critical header telemetry (.gis-header-meta-extra).
-      - Enlarges button hit targets for touch screen tablets (iPad / Android).
-   
-   3. MOBILE (< 768px, e.g. iPhone / Android / 390x844):
-      - Eliminates fixed dual-rail occlusion: HUD, Controls, and Legend auto-collapse
-        into sleek interactive launcher pills so 85%+ of the viewport is pure map.
-      - Converts bottom Floating Command Dock into an anchored 2-tier tactical console
-        with touch-padded buttons (>= 26px - 44px).
-      - Prioritizes critical in-map labels (8px, ellipsis truncation) to eliminate
-        label collisions on dense mountain corridors.
-      - Constrains popups to min(280px, calc(100vw - 28px)) with zero horizontal overflow.
-   
-   BREAKPOINT EXTENSION GUIDE FOR DEVELOPERS:
-   - Adjust @media (min-width: 1200px) for ultra-wide command wall monitors.
-   - Adjust @media (max-width: 767.98px) if supporting specialized handheld field radios.
-   ============================================================================ */
-
-/* Bootstrap-Compatible Helper Utilities (Theme-Consistent) */
-.gis-d-none { display: none !important; }
-.gis-d-flex { display: flex !important; }
-.gis-d-block { display: block !important; }
-.gis-w-100 { width: 100% !important; }
-.gis-h-100 { height: 100% !important; }
-.gis-gap-1 { gap: 4px !important; }
-.gis-gap-2 { gap: 8px !important; }
-.gis-flex-column { flex-direction: column !important; }
-.gis-flex-row { flex-direction: row !important; }
-.gis-align-center { align-items: center !important; }
-.gis-justify-between { justify-content: space-between !important; }
-
-/* Responsive Collapsed Summaries */
-.gis-hud-collapsed-summary {
-  font-size: 8.5px;
-  color: var(--color-warning);
-  font-family: var(--font-mono);
-  margin-left: 6px;
-  font-weight: 600;
-}
-
-/* Touch targets optimization */
-button, .gis-style-pill, .gis-toggle-pill-tactical, .gis-filter-pill, .gis-dock-btn {
-  min-height: 24px;
-  touch-action: manipulation;
-}
-
-/* -------------------------------------------------------
-   TABLET BREAKPOINT (768px - 1199.98px)
-   ------------------------------------------------------- */
-@media (min-width: 768px) and (max-width: 1199.98px) {
-  .gis-header {
-    padding: 0 8px;
-  }
-  .gis-header-meta-extra {
-    display: none;
-  }
+/* LARGE TABLET / SMALL DESKTOP (768px - 991px) */
+@media (min-width: 768px) and (max-width: 991.98px) {
   .gis-telemetry-hud {
-    width: 155px;
-    top: 40px;
-    left: 6px;
+    width: 188px;
   }
   .gis-controls-overlay {
-    width: 170px;
-    top: 40px;
-    right: 6px;
+    width: 172px;
   }
   .gis-legend-overlay {
     width: 160px;
-    bottom: 52px;
-    left: 6px;
   }
   .gis-floating-dock {
-    bottom: 6px;
-    padding: 3px 8px;
-    gap: 6px;
-    max-width: calc(100vw - 16px);
-  }
-  .gis-dock-telemetry-text {
-    font-size: 8.5px;
+    max-width: 96vw;
   }
 }
 
-/* -------------------------------------------------------
-   MOBILE BREAKPOINT (< 768px e.g. iPhone / Android / 390x844)
-   ------------------------------------------------------- */
+/* MOBILE / NARROW TABLET (< 768px) */
 @media (max-width: 767.98px) {
-  /* Header: Streamlined & compact */
   .gis-header {
-    height: 36px;
-    padding: 0 8px;
-    justify-content: space-between;
+    min-height: 36px;
+    padding-top: 4px;
+    padding-bottom: 4px;
   }
-  .gis-header-center {
-    display: none !important;
-  }
-  .gis-header-right {
-    display: flex !important;
-    align-items: center;
-    gap: 4px;
-  }
-  .gis-header-meta {
-    display: none !important;
-  }
-  .gis-header-divider {
-    display: none !important;
-  }
-  .gis-badge-operational {
-    padding: 2px 6px;
-    font-size: 8px;
+  .gis-header-ticker {
+    order: 3;
+    max-width: 100%;
+    flex-basis: 100%;
   }
 
-  /* Situation HUD: Collapsible top-left launcher */
+  /* Panels become stacked, near-full-width overlays instead of
+     fixed narrow columns, per the "no squeezed desktop UI" spec. */
   .gis-telemetry-hud {
-    top: 42px;
+    top: 6px;
     left: 6px;
-    width: 220px;
-    max-width: calc(100vw - 12px);
-    z-index: 1050;
+    width: calc(50vw - 10px);
+    max-width: 240px;
   }
   .gis-telemetry-hud.collapsed {
-    width: auto !important;
-    max-width: calc(100vw - 115px) !important;
+    width: auto;
+    max-width: calc(60vw - 12px);
   }
-  .gis-telemetry-hud.collapsed .gis-hud-header {
-    border-bottom: none !important;
-    padding: 4px 6px !important;
-  }
-  .gis-hud-collapsed-summary {
-    display: inline-block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 75px;
-    vertical-align: bottom;
-    font-size: 8px;
-  }
-  .gis-telemetry-hud .gis-hud-body {
-    max-height: calc(100vh - 170px);
-    overflow-y: auto;
-  }
-
-  /* Map Controls: Collapsible top-right launcher */
   .gis-controls-overlay {
-    top: 42px;
+    top: 6px;
     right: 6px;
-    width: 220px;
-    max-width: calc(100vw - 12px);
-    z-index: 1050;
+    width: calc(50vw - 10px);
+    max-width: 220px;
   }
   .gis-controls-overlay.collapsed {
-    width: 90px !important;
-    min-width: 90px !important;
+    width: auto !important;
+    max-width: 120px;
   }
-  .gis-controls-overlay.collapsed .gis-panel-header {
-    border-bottom: none !important;
-    padding: 4px 6px !important;
-  }
-  .gis-controls-overlay .gis-panel-body {
-    max-height: calc(100vh - 170px);
-    overflow-y: auto;
-    width: 220px;
-    position: absolute;
-    right: 0;
-    top: 26px;
-    background-color: var(--bg-sidebar);
-    border: 1px solid var(--border-subtle);
-    border-radius: 3px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.95);
-  }
-
-  /* Legend: Positioned above mobile dock */
   .gis-legend-overlay {
-    bottom: 84px;
+    /* Anchored above the compact single-row dock (48px + margin) so the
+       two floating panels never fight for the same bottom-left corner. */
+    bottom: 54px;
     left: 6px;
-    width: 170px;
-    max-width: calc(100vw - 12px);
-    z-index: 1040;
+    width: calc(100vw - 12px);
+    max-width: none;
+  }
+  .gis-legend-overlay:not(.collapsed) {
+    max-height: 38vh;
   }
   .gis-legend-overlay.collapsed {
-    width: 85px;
+    width: auto !important;
   }
 
-  /* Floating Bottom Command Dock: 2-tier mobile tactical bar */
+  /* Command dock becomes a single compact, horizontally-scrollable row
+     instead of wrapping into several tall rows that eat map real estate
+     (this was the "SCENARIO dock too tall/crowded on mobile" complaint).
+     Bootstrap's utility set has no "wrap-to-scroll" utility, so this one
+     override is a deliberate, documented exception per the CSS contract
+     at the top of this file. */
   .gis-floating-dock {
-    position: absolute;
-    bottom: 6px;
     left: 6px;
     right: 6px;
+    bottom: 6px;
     transform: none;
-    width: calc(100vw - 12px);
-    padding: 4px 6px;
-    flex-direction: column;
-    gap: 4px;
-    align-items: stretch;
-    z-index: 1060;
-    background-color: rgba(23, 28, 31, 0.96);
-    backdrop-filter: blur(8px);
-    border-radius: 4px;
+    max-width: none;
+    width: auto;
+    border-radius: 10px;
+    height: 48px;
+    min-height: 48px;
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    justify-content: flex-start;
   }
-
   .gis-dock-section {
-    width: 100%;
-    justify-content: space-between;
-    gap: 4px;
+    flex-shrink: 0;
   }
-
-  .gis-dock-meta-section {
-    display: none;
-  }
-
+  .gis-dock-meta-section,
   .gis-dock-sim-section {
-    justify-content: center;
+    border-right: 1px solid var(--border-subtle);
+    padding-right: 10px;
   }
+}
 
-  .gis-dock-section-title {
-    font-size: 8px;
+/* SHORT VIEWPORT HEIGHT (landscape phones: e.g. 844x390, 915x412).
+   The HUD is top-anchored and the Legend is bottom-anchored on the same
+   left column; on a tall portrait screen there's room for both expanded,
+   but on a short landscape screen they collide. Capping each panel's
+   height to a fraction of the viewport (with internal scroll) guarantees
+   they never overlap, regardless of how many rows are expanded inside. */
+@media (max-height: 480px) {
+  .gis-telemetry-hud {
+    top: 6px;
+    max-height: 44vh;
   }
-
-  .gis-dock-btn {
-    padding: 4px 6px;
-    font-size: 8px;
-    min-height: 26px;
+  .gis-controls-overlay {
+    top: 6px;
+    max-height: 44vh;
   }
-
-  .gis-dock-reset-btn {
-    padding: 4px 6px;
-    font-size: 8px;
-    min-height: 26px;
-  }
-
-  .gis-dock-style-group {
-    display: none;
-  }
-
-  /* Popups: Full-width adaptation on mobile */
-  .gis-popup-content {
-    min-width: unset !important;
-    width: min(280px, calc(100vw - 28px)) !important;
-  }
-
-  /* Tactical in-map labels: Condensed priority on mobile */
-  .gis-tactical-label-permanent {
-    font-size: 8px !important;
-    padding: 2px 4px !important;
-    max-width: 120px !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-  }
-
-  /* Leaflet Zoom buttons touch padding */
-  .leaflet-touch .leaflet-bar a {
-    width: 28px !important;
-    height: 28px !important;
-    line-height: 28px !important;
+  .gis-legend-overlay {
+    bottom: 58px;
+    max-height: 36vh;
   }
 }

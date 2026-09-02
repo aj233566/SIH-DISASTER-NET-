@@ -1,19 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 
 /**
  * ============================================================================
- * MAP CONTROLS — RESPONSIVE CONTROL MATRIX
+ * MAP CONTROLS — COMPACT 2-COLUMN CONTROL RAIL
  * ============================================================================
  * 
- * RESPONSIVE BEHAVIOR SPECIFICATION:
- * - Desktop (>= 1200px): Right tactical control matrix rail.
- * - Tablet (768px - 1199px): Compressed rail with touch padding.
- * - Mobile (< 768px): Collapses into a compact top-right button pill.
- *   Expanding presents a clean drawer with large touch targets.
+ * COMPACT SPECIFICATION:
+ * - Width: 156px desktop / 146px tablet
+ * - Compact 2-column layer button grid (INC, HOSP, SHEL, ASSET, ROAD, RISK, HEAT, ROUTE, VILL)
+ * - Tight button padding (2px 4px) with high-density font (8.5px mono)
+ * - Collapsible on mobile / minimal mode
  * ============================================================================
  */
-
-export default function MapControls({
+function MapControls({
   layerVisibility = {},
   onToggleLayer = () => {},
   severityFilter = 'ALL',
@@ -23,7 +22,7 @@ export default function MapControls({
   onResetView = () => {},
   hudMode = 'tactical'
 }) {
-  const isMobileInitial = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
+  const isMobileInitial = typeof window !== 'undefined' ? (window.innerWidth < 768 || window.innerHeight < 480) : false;
   const [isCollapsed, setIsCollapsed] = useState(hudMode === 'minimal' || isMobileInitial);
 
   useEffect(() => {
@@ -31,42 +30,41 @@ export default function MapControls({
   }, [hudMode]);
 
   const layerItems = [
-    { key: 'incidents', label: 'INC', title: 'Emergency Incidents / Landslides' },
-    { key: 'villages', label: 'VILL', title: 'Mountain Settlements & Villages' },
-    { key: 'hospitals', label: 'HOSP', title: 'Medical Facilities & CHCs' },
-    { key: 'shelters', label: 'SHEL', title: 'Mountain Relief Shelters' },
-    { key: 'resources', label: 'ASSET', title: 'BRO Earthmovers & SAR Teams' },
-    { key: 'roads', label: 'ROAD', title: 'Mountain Road Connectivity Network' },
-    { key: 'riskZones', label: 'RISK', title: 'Landslide-Prone Slope Zones' },
-    { key: 'heatmap', label: 'HEATMAP', title: 'Dynamic Multi-Factor Risk Heatmap (45/30/25)' },
-    { key: 'routes', label: 'ROUTE', title: 'Emergency Evacuation Routes' }
+    { key: 'incidents', label: 'INC', title: 'Emergency Incidents' },
+    { key: 'villages', label: 'VILL', title: 'Mountain Settlements' },
+    { key: 'hospitals', label: 'HOSP', title: 'Medical Facilities' },
+    { key: 'shelters', label: 'SHEL', title: 'Relief Shelters' },
+    { key: 'resources', label: 'ASSET', title: 'BRO Earthmovers & SAR' },
+    { key: 'roads', label: 'ROAD', title: 'Road Network' },
+    { key: 'riskZones', label: 'RISK', title: 'Landslide Risk Zones' },
+    { key: 'heatmap', label: 'HEAT', title: 'Risk Heatmap' },
+    { key: 'routes', label: 'ROUTE', title: 'Evacuation Routes' }
   ];
 
   const mapStyles = [
-    { key: 'standard', label: 'STD', title: 'Standard Midnight Operations' },
-    { key: 'tactical', label: 'TAC', title: 'Tactical High-Contrast' },
-    { key: 'night', label: 'NIGHT', title: 'Night Low-Light Ops' },
-    { key: 'risk', label: 'RISK', title: 'Spatial Hazard Focus' },
-    { key: 'analysis', label: 'ANLYS', title: 'Monochrome GIS Analysis' }
+    { key: 'standard', label: 'STD' },
+    { key: 'tactical', label: 'TAC' },
+    { key: 'night', label: 'NIGHT' },
+    { key: 'risk', label: 'RISK' },
+    { key: 'analysis', label: 'ANLYS' }
   ];
 
   return (
     <div className={`gis-controls-overlay ${isCollapsed ? 'collapsed' : ''}`}>
-      {/* Module Header */}
-      <div 
-        className="gis-panel-header" 
+      {/* Header */}
+      <div
+        className="gis-panel-header d-flex align-items-center justify-content-between gap-2"
         onClick={() => setIsCollapsed(!isCollapsed)}
         role="button"
         tabIndex={0}
-        aria-expanded={!isCollapsed}
       >
-        <div className="gis-panel-title">
+        <div className="gis-panel-title d-flex align-items-center gap-1">
           <span style={{ color: 'var(--color-info)' }}>//</span>
           <span>CONTROLS</span>
         </div>
         <button
           className="gis-collapse-btn"
-          aria-label={isCollapsed ? 'Expand controls panel' : 'Collapse controls panel'}
+          aria-label={isCollapsed ? "Expand controls" : "Collapse controls"}
           onClick={(e) => {
             e.stopPropagation();
             setIsCollapsed(!isCollapsed);
@@ -77,91 +75,72 @@ export default function MapControls({
       </div>
 
       {!isCollapsed && (
-        <div className="gis-panel-body">
-          {/* 1. Map Style Preset Selector */}
-          <div className="gis-control-section">
-            <span className="gis-section-label">MAP STYLE</span>
-            <div className="gis-style-grid">
-              {mapStyles.map((style) => (
-                <button
-                  key={style.key}
-                  data-style={style.key}
-                  className={`gis-style-pill ${mapStyle === style.key ? 'active' : ''}`}
-                  onClick={() => onSetMapStyle(style.key)}
-                  title={style.title}
-                >
-                  {style.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 2. GIS Layer Visibility Matrix */}
-          <div className="gis-control-section">
-            <span className="gis-section-label">LAYERS</span>
-            <div className="gis-toggles-grid-2col">
+        <div className="gis-panel-body d-flex flex-column gap-3">
+          {/* Section 1: Layer Matrix — real Bootstrap 2-column grid */}
+          <div className="gis-controls-section d-flex flex-column gap-1">
+            <span className="gis-section-subtitle">LAYERS</span>
+            <div className="row row-cols-2 g-1">
               {layerItems.map((item) => {
-                const isActive = !!layerVisibility[item.key];
+                const isActive = layerVisibility[item.key] !== false;
                 return (
-                  <button
-                    key={item.key}
-                    className={`gis-toggle-pill-tactical ${isActive ? 'is-active' : ''}`}
-                    onClick={() => onToggleLayer(item.key)}
-                    title={item.title}
-                  >
-                    <span className="gis-toggle-dot-sm" />
-                    <span>{item.label}</span>
-                  </button>
+                  <div className="col" key={item.key}>
+                    <button
+                      className={`gis-btn-compact d-flex align-items-center gap-1 w-100 ${isActive ? 'active' : ''}`}
+                      onClick={() => onToggleLayer(item.key)}
+                      title={item.title}
+                    >
+                      <span className="gis-indicator-dot" />
+                      <span>{item.label}</span>
+                    </button>
+                  </div>
                 );
               })}
             </div>
           </div>
 
-          {/* 3. Severity Filter */}
-          <div className="gis-control-section">
-            <span className="gis-section-label">SEVERITY FILTER</span>
-            <div className="gis-filter-group">
-              <button
-                className={`gis-filter-pill ${severityFilter === 'ALL' ? 'active' : ''}`}
-                onClick={() => onSetSeverityFilter('ALL')}
-                title="Display all incidents"
-              >
-                ALL
-              </button>
-              <button
-                className={`gis-filter-pill ${severityFilter === 'CRITICAL' ? 'active' : ''}`}
-                onClick={() => onSetSeverityFilter('CRITICAL')}
-                title="Filter for Critical severity only"
-              >
-                CRIT
-              </button>
-              <button
-                className={`gis-filter-pill ${severityFilter === 'HIGH_PLUS' ? 'active' : ''}`}
-                onClick={() => onSetSeverityFilter('HIGH_PLUS')}
-                title="Filter for High and Critical severity"
-              >
-                HIGH+
-              </button>
+          {/* Section 2: Severity Filter — real Bootstrap 3-column grid */}
+          <div className="gis-controls-section d-flex flex-column gap-1">
+            <span className="gis-section-subtitle">SEVERITY FILTER</span>
+            <div className="row row-cols-3 g-1">
+              {['ALL', 'CRITICAL', 'HIGH_PLUS'].map((sev) => (
+                <div className="col" key={sev}>
+                  <button
+                    className={`gis-btn-filter w-100 ${severityFilter === sev ? 'active' : ''}`}
+                    onClick={() => onSetSeverityFilter(sev)}
+                  >
+                    {sev === 'HIGH_PLUS' ? 'HIGH+' : sev === 'CRITICAL' ? 'CRIT' : 'ALL'}
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* 4. Reticle Reset Button */}
-          <button
-            className="gis-reset-btn"
-            onClick={onResetView}
-            title="Recenter camera to active mountain operational theater"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="22" y1="12" x2="18" y2="12" />
-              <line x1="6" y1="12" x2="2" y2="12" />
-              <line x1="12" y1="6" x2="12" y2="2" />
-              <line x1="12" y1="22" x2="12" y2="18" />
-            </svg>
-            <span>RESET RETICLE</span>
-          </button>
+          {/* Section 3: Cartographic Preset */}
+          <div className="gis-controls-section d-flex flex-column gap-1">
+            <span className="gis-section-subtitle">STYLE PRESET</span>
+            <div className="d-flex flex-wrap gap-1">
+              {mapStyles.map((st) => (
+                <button
+                  key={st.key}
+                  className={`gis-style-pill flex-fill ${mapStyle === st.key ? 'active' : ''}`}
+                  onClick={() => onSetMapStyle(st.key)}
+                >
+                  {st.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Section 4: Camera Reticle Reset */}
+          <div className="gis-controls-section">
+            <button className="gis-btn-reset-full" onClick={onResetView} title="Reset camera to operational bounding envelope">
+              [ ⌖ RESET RETICLE ]
+            </button>
+          </div>
         </div>
       )}
     </div>
   );
 }
+
+export default memo(MapControls);

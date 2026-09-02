@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import MapView from './MapView';
 import IncidentLayer from './layers/IncidentLayer';
 import FacilityLayer from './layers/FacilityLayer';
@@ -29,40 +29,36 @@ import {
   DEMO_ROUTES,
   DEMO_SIMULATION_SCENARIOS
 } from '../../data/gis/demoGisData';
+// Bootstrap 5 supplies the real responsive grid/flex utilities used
+// throughout this module's JSX (row/col-*, d-flex, g-*, d-{bp}-*). It must
+// be resolvable as a dependency by whatever app mounts GisCommandCenter
+// (see cascade-gis/package.json for the local preview harness). Imported
+// before gis.css so our tactical theme (equal-specificity class selectors,
+// later in source order) wins the cascade without needing !important.
+import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../styles/gis.css';
 
 /**
  * ============================================================================
  * CASCADE-NET GIS COMMAND CENTER — TURN-KEY INTEGRATION MODULE
  * ============================================================================
- * 
+ *
  * LEAD & OWNERSHIP:
  * Sampad — GIS, Risk Heatmap & Road Connectivity Lead
- * 
- * PURPOSE & USAGE:
- * Self-contained, production-grade GIS Command Center component designed to be
- * mounted directly into Jeewansh's React dashboard or dedicated route view.
- * 
- * EXAMPLE USAGE:
- * ```jsx
- * import GisCommandCenter from './components/gis/GisCommandCenter';
- * 
- * export default function OperationsDashboard() {
- *   return (
- *     <div style={{ width: '100vw', height: '100vh' }}>
- *       <GisCommandCenter hudMode="tactical" />
- *     </div>
- *   );
- * }
- * ```
- * 
- * API PROVENANCE & DATA PRECEDENCE:
- * 1. Live Incidents: If `liveIncidents` prop is passed or fetched from `/api/incidents`,
- *    live backend data takes strict precedence (`SOURCE: LIVE API`).
- * 2. Fallback / Offline: If backend data is empty or unreachable, falls back to
- *    hardened NER Landslide demo fixtures (`SOURCE: SIMULATED TELEMETRY`).
- * 3. Unverified Backend APIs (/api/roads, /api/villages, /api/risk, /api/hospitals):
- *    Currently consume validated domain fixtures awaiting future backend routes.
+ *
+ * PERFORMANCE & ARCHITECTURAL CONTRACT:
+ * 1. Strict Reference Stability: baselineState and activeMapState are fully
+ *    memoized with useMemo to prevent unneeded re-render cascades.
+ * 2. Asynchronous Route Evaluation: Evaluates candidate evacuation routes
+ *    only when the underlying road network or scenario topology changes.
+ * 3. Pure Spatial Layers: Child Leaflet overlay layers are React.memo memoized
+ *    to prevent expensive DOM and Leaflet SVG recreation cycles.
+ * 4. Ultra-Compact Tactical UI: High visual map dominance (>88% viewport surface)
+ *    with compact, instrument-like HUD overlays.
+ * 5. Real Bootstrap 5 Grid: All structural layout (panel grids, dock sections,
+ *    responsive show/hide) uses Bootstrap utility classes, not hand-rolled
+ *    CSS grid/flex. gis.css only supplies color/border/type-scale plus the
+ *    floating-panel positioning Bootstrap's utility API has no equivalent for.
  * ============================================================================
  */
 export default function GisCommandCenter({
@@ -114,8 +110,8 @@ export default function GisCommandCenter({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Baseline Map State
-  const baselineState = {
+  // 1. Stable Baseline Map State (Preserves referential identity)
+  const baselineState = useMemo(() => ({
     roads: DEMO_ROADS,
     villages: DEMO_VILLAGES,
     hospitals: DEMO_HOSPITALS,
@@ -123,14 +119,17 @@ export default function GisCommandCenter({
     resources: DEMO_RESOURCES,
     riskZones: DEMO_RISK_ZONES,
     routes: DEMO_ROUTES
-  };
+  }), []);
 
-  // Compute active map state through Simulator Adapter based on active scenario
-  const activeMapState = simScenario !== 'BASELINE' && DEMO_SIMULATION_SCENARIOS[simScenario]
-    ? normalizeSimulatorDelta(DEMO_SIMULATION_SCENARIOS[simScenario], baselineState)
-    : baselineState;
+  // 2. Stable Active Map State computed through Simulator Adapter
+  const activeMapState = useMemo(() => {
+    if (simScenario !== 'BASELINE' && DEMO_SIMULATION_SCENARIOS[simScenario]) {
+      return normalizeSimulatorDelta(DEMO_SIMULATION_SCENARIOS[simScenario], baselineState);
+    }
+    return baselineState;
+  }, [simScenario, baselineState]);
 
-  // Asynchronously compute live or fallback emergency routes
+  // 3. Asynchronously compute emergency routes ONLY when topology actually changes
   useEffect(() => {
     let isMounted = true;
     async function evaluateRoutes() {
@@ -148,7 +147,13 @@ export default function GisCommandCenter({
         });
 
         if (isMounted) {
-          setRoutes(evaluated);
+          setRoutes((prevRoutes) => {
+            // Guard against redundant state updates and infinite render loops
+            const prevIds = prevRoutes.map(r => `${r.id}:${r.status}:${r.travelTimeEtaMin || 0}`).join('|');
+            const newIds = evaluated.map(r => `${r.id}:${r.status}:${r.travelTimeEtaMin || 0}`).join('|');
+            if (prevIds === newIds) return prevRoutes;
+            return evaluated;
+          });
           setIsLiveTraffic(routingService.isLiveTomTom());
         }
       } catch (err) {
@@ -157,7 +162,7 @@ export default function GisCommandCenter({
     }
     evaluateRoutes();
     return () => { isMounted = false; };
-  }, [simScenario, activeMapState.roads, incidents]);
+  }, [simScenario, activeMapState, incidents]);
 
   // Layer Visibility State (9 Independent Subsystems)
   const [layerVisibility, setLayerVisibility] = useState({
@@ -175,18 +180,33 @@ export default function GisCommandCenter({
   // Severity Filter ('ALL' | 'CRITICAL' | 'HIGH_PLUS')
   const [severityFilter, setSeverityFilter] = useState('ALL');
 
-  const handleToggleLayer = (layerKey) => {
+  const handleToggleLayer = useCallback((layerKey) => {
     setLayerVisibility((prev) => ({
       ...prev,
       [layerKey]: !prev[layerKey]
     }));
-  };
+  }, []);
 
-  const filteredIncidents = incidents.filter((inc) => {
-    if (severityFilter === 'CRITICAL') return inc.severity === 'Critical';
-    if (severityFilter === 'HIGH_PLUS') return inc.severity === 'Critical' || inc.severity === 'High';
-    return true;
-  });
+  const handleSetSeverityFilter = useCallback((filter) => {
+    setSeverityFilter(filter);
+  }, []);
+
+  const handleSetMapStyle = useCallback((style) => {
+    setMapStyle(style);
+  }, []);
+
+  const handleResetView = useCallback(() => {
+    setResetTrigger((prev) => prev + 1);
+  }, []);
+
+  // Memoized Filtered Incidents to prevent recreating arrays on every render
+  const filteredIncidents = useMemo(() => {
+    return incidents.filter((inc) => {
+      if (severityFilter === 'CRITICAL') return inc.severity === 'Critical';
+      if (severityFilter === 'HIGH_PLUS') return inc.severity === 'Critical' || inc.severity === 'High';
+      return true;
+    });
+  }, [incidents, severityFilter]);
 
   // Dynamic Multi-Factor Risk Heatmap Nodes (45% Risk Score + 30% Incident Density + 25% Rainfall Severity)
   const heatmapNodes = useMemo(() => {
@@ -194,12 +214,23 @@ export default function GisCommandCenter({
   }, [activeMapState.riskZones, filteredIncidents]);
 
   // Live HUD Telemetry & Derived Disaster Metrics
-  const blockedRoadCount = activeMapState.roads.filter((r) => r.status === 'Blocked').length;
-  const criticalIncidentCount = filteredIncidents.filter((i) => i.severity === 'Critical').length;
-  const hospitalAccessBlocked = activeMapState.hospitals.some((h) => (h.roadAccess || '').toLowerCase() === 'blocked');
-  const recommendedRoute = routes.find((r) => r.status === 'Recommended') || routes.find((r) => r.type === 'Primary') || routes[0];
+  const blockedRoadCount = useMemo(() => {
+    return activeMapState.roads.filter((r) => r.status === 'Blocked').length;
+  }, [activeMapState.roads]);
 
-  // Dynamic Isolated Mountain Villages Count (Only isolated when physical access road is BLOCKED)
+  const criticalIncidentCount = useMemo(() => {
+    return filteredIncidents.filter((i) => i.severity === 'Critical').length;
+  }, [filteredIncidents]);
+
+  const hospitalAccessBlocked = useMemo(() => {
+    return activeMapState.hospitals.some((h) => (h.roadAccess || '').toLowerCase() === 'blocked');
+  }, [activeMapState.hospitals]);
+
+  const recommendedRoute = useMemo(() => {
+    return routes.find((r) => r.status === 'Recommended') || routes.find((r) => r.type === 'Primary') || routes[0];
+  }, [routes]);
+
+  // Dynamic Isolated Mountain Villages Count
   const isolatedVillagesCount = useMemo(() => {
     return (activeMapState.villages || []).filter((v) => {
       const road = (activeMapState.roads || []).find((r) => r.id === v.primaryAccessRoadId);
@@ -214,170 +245,178 @@ export default function GisCommandCenter({
     return Math.max(...activeMapState.riskZones.map((z) => z.riskScore || 0));
   }, [activeMapState.riskZones]);
 
-  const handleSelect = (feature) => {
+  // Peak 24h Rainfall across active operational risk zones
+  const maxRainfall24h = useMemo(() => {
+    if (!activeMapState.riskZones || activeMapState.riskZones.length === 0) return 0;
+    return Math.max(...activeMapState.riskZones.map((z) => z.rainfall24hMm || 0));
+  }, [activeMapState.riskZones]);
+
+  const handleSelect = useCallback((feature) => {
     setSelectedFeature(feature);
     if (onSelectFeature) onSelectFeature(feature);
-  };
+  }, [onSelectFeature]);
 
   return (
-    <div className="gis-app-wrapper">
+    <div className="gis-app-wrapper d-flex flex-column vh-100">
       {/* 1. Institutional Top Operational Header */}
-      <header className="gis-header">
-        <div className="gis-header-left">
+      <header className="gis-header d-flex align-items-center justify-content-between gap-2 px-2 px-md-3">
+        <div className="gis-header-left d-flex align-items-center gap-2">
           <span className="gis-eoc-tag">EOC-GIS</span>
-          <div className="gis-header-title">
+          <div className="gis-header-title d-flex align-items-center gap-2">
             <span className="gis-brand-name">CASCADE-NET</span>
-            <span style={{ color: 'var(--text-muted)' }}>/</span>
-            <span className="gis-sub-title">GIS COMMAND CENTER</span>
+            <span className="d-none d-sm-inline" style={{ color: 'var(--text-muted)' }}>/</span>
+            <span className="d-none d-sm-inline" style={{ color: 'var(--text-secondary)' }}>SIKKIM THEATER</span>
           </div>
         </div>
 
-        <div className="gis-header-center">
-          <div className="gis-status-badge">
-            <span className="gis-status-dot warning-pulse" />
-            <span className="gis-status-text">
-              {simScenario === 'BASELINE' && 'BASELINE: NH-10 KM 32 BLOCKED • WESTERN RIDGE DETOUR (26 mins)'}
-              {simScenario === 'TRAFFIC_SPIKE' && 'ALERT: EVACUATION SURGE • WESTERN RIDGE CONVOY (54 mins)'}
-              {simScenario === 'CLEAR_RING_ROAD_R17' && 'RESTORED: NH-10 CLEARED BY BRO • ARTERIAL CORRIDOR OPEN (14 mins)'}
-            </span>
-          </div>
+        {/* Tactical Status Pill */}
+        <div className="gis-header-ticker d-flex align-items-center gap-2 d-none d-md-flex">
+          <span className="gis-ticker-dot live-pulse" />
+          <span className="gis-ticker-text">
+            {simScenario === 'BASELINE' ? 'NH-10 Km 32 BLOCKED • SIKKIM EOC DEPLOYED' :
+             simScenario === 'TRAFFIC_SPIKE' ? 'EVACUATION CONVOY SURGE • NH-10 DELAY +42m' :
+             'NH-10 RESTORED • BRO CLEARANCE COMPLETE'}
+          </span>
         </div>
 
-        <div className="gis-header-right">
-          <span className="gis-header-meta gis-header-meta-extra">SECTOR: <strong>{DEMO_META.sector}</strong></span>
-          <span className="gis-header-divider">|</span>
-          <span className="gis-header-meta">ROUTING: <strong style={{ color: isLiveTraffic ? 'var(--color-operational)' : 'var(--color-warning)' }}>{isLiveTraffic ? 'LIVE TOMTOM' : 'SIMULATED TRAFFIC'}</strong></span>
-          <span className="gis-header-divider">|</span>
-          <span className="gis-header-meta gis-header-meta-extra">STYLE: <strong>{mapStyle.toUpperCase()}</strong></span>
-          <span className="gis-header-divider">|</span>
-          <span className="gis-header-meta">MODE: <strong>{hudMode.toUpperCase()}</strong></span>
-          <span className="gis-header-divider">|</span>
-          <span className="gis-badge-operational">OPERATIONAL</span>
+        <div className="gis-header-meta d-flex align-items-center gap-2">
+          <span className="gis-header-meta-extra d-none d-lg-inline">LAT 27.285°N LON 88.565°E</span>
+          <span className="gis-header-meta-extra d-none d-lg-inline">•</span>
+          <span className="gis-header-meta-extra d-none d-lg-inline">DATUM WGS-84</span>
+          <span className="gis-header-meta-extra d-none d-lg-inline">•</span>
+          <span className={isLiveApiData ? 'gis-meta-live' : 'gis-meta-sim'}>
+            {isLiveApiData ? 'LIVE API' : 'SIMULATED DATA'}
+          </span>
+          <span className="gis-header-meta-extra d-none d-sm-inline">•</span>
+          <span className="d-none d-sm-inline" style={{ color: 'var(--color-info)' }}>{hudMode.toUpperCase()}</span>
         </div>
       </header>
 
-      {/* 2. Full-Screen Spatial Leaflet Canvas & Tactical UI Overlay */}
-      <div className="gis-main-content">
-        {/* Situation Telemetry HUD (Top-Left) */}
+      {/* 2. Map Operating Canvas */}
+      <main className={`gis-workspace flex-grow-1 position-relative gis-style-${mapStyle}`}>
+        <MapView className="gis-dark-tiles">
+          {/* Spatial Reset Controller */}
+          <MapResetController resetTrigger={resetTrigger} isSimActive={simScenario !== 'BASELINE'} />
+
+          {/* Dynamic Spatial Heatmap Layer (Z-Index Lowest) */}
+          <RiskHeatmapLayer
+            nodes={heatmapNodes}
+            visible={layerVisibility.heatmap}
+            onSelectNode={handleSelect}
+          />
+
+          {/* Landslide Risk Zones Layer */}
+          <RiskZoneLayer
+            riskZones={activeMapState.riskZones}
+            visible={layerVisibility.riskZones}
+            selectedRiskZoneId={selectedFeature && selectedFeature.id}
+            onSelectRiskZone={handleSelect}
+            hudMode={hudMode}
+          />
+
+          {/* Road Network & Mountain Connectivity Corridor Layer */}
+          <RoadStatusLayer
+            roads={activeMapState.roads}
+            visible={layerVisibility.roads}
+            selectedRoadId={selectedFeature && selectedFeature.id}
+            onSelectRoad={handleSelect}
+            hudMode={hudMode}
+          />
+
+          {/* Emergency Evacuation & Relief Logistics Routes */}
+          <RouteLayer
+            routes={routes}
+            visible={layerVisibility.routes}
+            selectedRouteId={selectedFeature && selectedFeature.id}
+            onSelectRoute={handleSelect}
+            hudMode={hudMode}
+          />
+
+          {/* Mountain Villages & Isolated Communities Layer */}
+          <VillageLayer
+            villages={activeMapState.villages}
+            roads={activeMapState.roads}
+            visible={layerVisibility.villages}
+            selectedVillageId={selectedFeature && selectedFeature.id}
+            onSelectVillage={handleSelect}
+            hudMode={hudMode}
+          />
+
+          {/* Medical Facilities & Relief Shelters Layer */}
+          <FacilityLayer
+            hospitals={activeMapState.hospitals}
+            shelters={activeMapState.shelters}
+            visibleHospitals={layerVisibility.hospitals}
+            visibleShelters={layerVisibility.shelters}
+            selectedFacilityId={selectedFeature && selectedFeature.id}
+            onSelectFacility={handleSelect}
+            hudMode={hudMode}
+          />
+
+          {/* BRO Heavy Earthmovers & NDRF Rescue Resources Layer */}
+          <ResourceLayer
+            resources={activeMapState.resources}
+            visible={layerVisibility.resources}
+            selectedResourceId={selectedFeature && selectedFeature.id}
+            onSelectResource={handleSelect}
+            hudMode={hudMode}
+          />
+
+          {/* Active Disaster Incidents Layer */}
+          <IncidentLayer
+            incidents={filteredIncidents}
+            visible={layerVisibility.incidents}
+            selectedIncidentId={selectedFeature && selectedFeature.id}
+            onSelectIncident={handleSelect}
+            hudMode={hudMode}
+          />
+        </MapView>
+
+        {/* 3. Left Situation Telemetry HUD (Compact Tactical Instrumentation) */}
         <TacticalTelemetryHUD
           incidentCount={filteredIncidents.length}
           criticalCount={criticalIncidentCount}
           blockedRoadCount={blockedRoadCount}
           isolatedVillagesCount={isolatedVillagesCount}
-          rainfall24h="158 mm"
+          rainfall24h={`${maxRainfall24h} mm`}
           rainfallSeverity="EXTREME"
           maxRiskScore={maxRiskScore}
-          heatmapSeverity="CRITICAL"
-          hospitalAccessCount={hospitalAccessBlocked ? '1/2 RESTRICTED' : '2/2 OPEN'}
-          activeResourcesCount={activeMapState.resources.length}
+          heatmapSeverity={maxRiskScore >= 80 ? 'CRITICAL' : 'HIGH'}
+          hospitalAccessCount={hospitalAccessBlocked ? '1/2 RESTRICTED' : '2/2 CLEAR'}
+          activeResourcesCount={activeMapState.resources ? activeMapState.resources.length : 3}
           hudMode={hudMode}
-          weatherSource={isLiveApiData ? 'LIVE API' : 'SIMULATED WEATHER'}
+          weatherSource="SIMULATED WEATHER"
         />
 
-        {/* Operational Control Matrix (Top-Right) */}
+        {/* 4. Right Tactical Control Matrix */}
         <MapControls
           layerVisibility={layerVisibility}
           onToggleLayer={handleToggleLayer}
           severityFilter={severityFilter}
-          onSetSeverityFilter={setSeverityFilter}
+          onSetSeverityFilter={handleSetSeverityFilter}
           mapStyle={mapStyle}
-          onSetMapStyle={setMapStyle}
-          onResetView={() => setResetTrigger((prev) => prev + 1)}
+          onSetMapStyle={handleSetMapStyle}
+          onResetView={handleResetView}
           hudMode={hudMode}
         />
 
-        {/* Tactical Legend (Bottom-Left) */}
-        <MapLegend hudMode={hudMode} />
+        {/* 5. Bottom-Left Map Legend */}
+        <MapLegend hudMode={hudMode} isSimActive={simScenario !== 'BASELINE'} />
 
-        {/* Floating Command Dock (Bottom Floating) */}
+        {/* 6. Floating Command Dock (Single Compact Row Island) */}
         <FloatingCommandDock
           mapStyle={mapStyle}
-          onSetMapStyle={setMapStyle}
+          onSetMapStyle={handleSetMapStyle}
           simScenario={simScenario}
           onSetScenario={setSimScenario}
           hudMode={hudMode}
           onSetHudMode={setHudMode}
-          onResetView={() => setResetTrigger((prev) => prev + 1)}
+          onResetView={handleResetView}
           activeCorridorName={recommendedRoute ? recommendedRoute.name : 'Western Ridge Alternate'}
-          activeCorridorEta={recommendedRoute ? `${recommendedRoute.etaMinutes} mins` : '26 mins'}
+          activeCorridorEta={recommendedRoute ? `${recommendedRoute.travelTimeEtaMin || 26} mins` : '26 mins'}
           isLiveTraffic={isLiveTraffic}
         />
-
-        <MapView>
-          {/* Camera Reset and Theater Controller */}
-          <MapResetController resetTrigger={resetTrigger} isSimActive={simScenario === 'CLEAR_RING_ROAD_R17'} />
-
-          {/* 0.5 Multi-Factor Dynamic Risk Heatmap Layer (Subordinate Ground Gradient) */}
-          <RiskHeatmapLayer nodes={heatmapNodes} visible={layerVisibility.heatmap} />
-
-          {/* 1. Risk Zone Layer */}
-          {layerVisibility.riskZones && (
-            <RiskZoneLayer
-              riskZones={activeMapState.riskZones}
-              selectedZoneId={selectedFeature ? selectedFeature.id : null}
-              onSelectZone={handleSelect}
-            />
-          )}
-
-          {/* 1.5 Mountain Settlement & Village Layer */}
-          {layerVisibility.villages && (
-            <VillageLayer
-              villages={activeMapState.villages}
-              roads={activeMapState.roads}
-              selectedVillageId={selectedFeature ? selectedFeature.id : null}
-              onSelectVillage={handleSelect}
-              hudMode={hudMode}
-            />
-          )}
-
-          {/* 2. Road Status Layer */}
-          {layerVisibility.roads && (
-            <RoadStatusLayer
-              roads={activeMapState.roads}
-              selectedRoadId={selectedFeature ? selectedFeature.id : null}
-              onSelectRoad={handleSelect}
-              hudMode={hudMode}
-            />
-          )}
-
-          {/* 3. Facility Layer */}
-          <FacilityLayer
-            hospitals={activeMapState.hospitals}
-            shelters={activeMapState.shelters}
-            selectedFeatureId={selectedFeature ? selectedFeature.id : null}
-            onSelectFeature={handleSelect}
-            visibleHospitals={layerVisibility.hospitals}
-            visibleShelters={layerVisibility.shelters}
-          />
-
-          {/* 4. Incident Layer */}
-          {layerVisibility.incidents && (
-            <IncidentLayer
-              incidents={filteredIncidents}
-              selectedIncidentId={selectedFeature ? selectedFeature.id : null}
-              onSelectIncident={handleSelect}
-            />
-          )}
-
-          {/* 5. Resource Layer */}
-          {layerVisibility.resources && (
-            <ResourceLayer
-              resources={activeMapState.resources}
-              selectedResourceId={selectedFeature ? selectedFeature.id : null}
-              onSelectResource={handleSelect}
-            />
-          )}
-
-          {/* 6. Emergency Route Layer */}
-          {layerVisibility.routes && (
-            <RouteLayer
-              routes={routes}
-              selectedRouteId={selectedFeature ? selectedFeature.id : null}
-              onSelectRoute={handleSelect}
-            />
-          )}
-        </MapView>
-      </div>
+      </main>
     </div>
   );
 }

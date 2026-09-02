@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Circle, Tooltip } from 'react-leaflet';
 
 /**
@@ -25,7 +25,7 @@ import { Circle, Tooltip } from 'react-leaflet';
  * ============================================================================
  */
 
-export default function RiskHeatmapLayer({
+function RiskHeatmapLayer({
   nodes = [],
   visible = true,
   onSelectNode
@@ -82,3 +82,5 @@ export default function RiskHeatmapLayer({
     </>
   );
 }
+
+export default memo(RiskHeatmapLayer);

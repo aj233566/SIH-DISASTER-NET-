@@ -1,30 +1,25 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Tooltip } from 'react-leaflet';
 import GisMarker from '../GisMarker';
 import MapPopup from '../MapPopup';
 import { shouldShowLabel, PRIORITY_WEIGHTS } from '../../../utils/gis/overlayPriority';
 
-export default function IncidentLayer({
+function IncidentLayer({
   incidents = [],
+  visible = true,
   selectedIncidentId = null,
   onSelectIncident,
   hudMode = 'tactical'
 }) {
-  const validIncidents = Array.isArray(incidents)
-    ? incidents.filter(
-        (inc) =>
-          inc &&
-          inc.location &&
-          typeof inc.location.lat === 'number' &&
-          !isNaN(inc.location.lat) &&
-          typeof inc.location.lng === 'number' &&
-          !isNaN(inc.location.lng)
-      )
-    : [];
+  if (!visible || !Array.isArray(incidents) || incidents.length === 0) {
+    return null;
+  }
 
   return (
     <>
-      {validIncidents.map((incident) => {
+      {incidents.map((incident) => {
+        if (!incident.location || typeof incident.location.lat !== 'number') return null;
+
         const isSelected = selectedIncidentId === incident.id;
         const isCritical = incident.severity === 'Critical';
         const position = [incident.location.lat, incident.location.lng];
@@ -48,14 +43,14 @@ export default function IncidentLayer({
               <Tooltip
                 permanent
                 direction="top"
-                offset={[0, -18]}
+                offset={[0, -22]}
                 className="gis-tactical-label-permanent critical-label"
               >
-                <span>[{incident.id}] {incident.title.includes('Flood') ? 'CRITICAL FLOOD' : 'CRITICAL INCIDENT'}</span>
+                <span>[{incident.id}] CRITICAL</span>
               </Tooltip>
             ) : (
               <Tooltip direction="top" offset={[0, -18]} className="gis-tactical-tooltip-contextual">
-                <span>{incident.id}: {incident.title} [{incident.severity.toUpperCase()}]</span>
+                <span>[{incident.id}] {incident.title}</span>
               </Tooltip>
             )}
 
@@ -78,3 +73,5 @@ export default function IncidentLayer({
     </>
   );
 }
+
+export default memo(IncidentLayer);

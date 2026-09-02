@@ -1,13 +1,16 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Tooltip } from 'react-leaflet';
 import GisMarker from '../GisMarker';
 import MapPopup from '../MapPopup';
 
-export default function ResourceLayer({
+function ResourceLayer({
   resources = [],
+  visible = true,
   selectedResourceId = null,
   onSelectResource
 }) {
+  if (!visible) return null;
+
   const validResources = Array.isArray(resources)
     ? resources.filter(
         (res) =>
@@ -73,3 +76,5 @@ export default function ResourceLayer({
     </>
   );
 }
+
+export default memo(ResourceLayer);

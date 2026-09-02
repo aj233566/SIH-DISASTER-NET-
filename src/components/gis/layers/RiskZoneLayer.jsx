@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Polygon, Circle } from 'react-leaflet';
 import MapPopup from '../MapPopup';
 
@@ -7,19 +7,20 @@ import MapPopup from '../MapPopup';
  * 
  * Props:
  * - riskZones: Array of risk zone objects
- * - selectedZoneId: string | null
- * - onSelectZone: (zone) => void
+ * - selectedRiskZoneId: string | null
+ * - onSelectRiskZone: (zone) => void
  * 
  * Safety:
  * Validates polygon coordinate arrays (>= 3 points) and circle centers.
  * Skips malformed geometries safely without crashing the map.
  */
-export default function RiskZoneLayer({
+function RiskZoneLayer({
   riskZones = [],
-  selectedZoneId = null,
-  onSelectZone
+  visible = true,
+  selectedRiskZoneId = null,
+  onSelectRiskZone
 }) {
-  if (!Array.isArray(riskZones) || riskZones.length === 0) {
+  if (!visible || !Array.isArray(riskZones) || riskZones.length === 0) {
     return null;
   }
 
@@ -83,7 +84,7 @@ export default function RiskZoneLayer({
     <>
       {riskZones.map((zone) => {
         if (!zone) return null;
-        const isSelected = selectedZoneId === zone.id;
+        const isSelected = selectedRiskZoneId === zone.id;
         const style = getZoneStyle(zone.riskLevel, isSelected);
 
         const popupContent = (
@@ -115,7 +116,7 @@ export default function RiskZoneLayer({
               center={zone.center}
               radius={zone.radius}
               pathOptions={style}
-              eventHandlers={onSelectZone ? { click: () => onSelectZone(zone) } : undefined}
+              eventHandlers={onSelectRiskZone ? { click: () => onSelectRiskZone(zone) } : undefined}
             >
               {popupContent}
             </Circle>
@@ -128,7 +129,7 @@ export default function RiskZoneLayer({
               key={zone.id}
               positions={zone.coordinates}
               pathOptions={style}
-              eventHandlers={onSelectZone ? { click: () => onSelectZone(zone) } : undefined}
+              eventHandlers={onSelectRiskZone ? { click: () => onSelectRiskZone(zone) } : undefined}
             >
               {popupContent}
             </Polygon>
@@ -140,3 +141,5 @@ export default function RiskZoneLayer({
     </>
   );
 }
+
+export default memo(RiskZoneLayer);
