@@ -25,7 +25,12 @@
 export const DEMO_MAP_CONFIG = {
   initialCenter: [27.2850, 88.5650], // Midpoint of Singtam-Martam-Gangtok NH-10 Corridor
   initialZoom: 12.8,
-  minZoom: 9,
+  // minZoom:3 lets the operator zoom all the way out to the whole of India /
+  // the subcontinent / the world (was locked at 9, which trapped the view on
+  // the Sikkim corridor and made it look like the map only covered one area).
+  // maxZoom:19 keeps street-level detail. Pan is unrestricted, so any part of
+  // the country can be explored in full detail.
+  minZoom: 3,
   maxZoom: 19
 };
 

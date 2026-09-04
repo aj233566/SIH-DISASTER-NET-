@@ -11,6 +11,17 @@ import RouteLayer from './layers/RouteLayer';
 import MapControls from './MapControls';
 import MapLegend from './MapLegend';
 import MapResetController from './MapResetController';
+import MapCoordinateTracker from './MapCoordinateTracker';
+import UserPointsLayer from './UserPointsLayer';
+import LiveQuakeLayer from './layers/LiveQuakeLayer';
+import LiveHospitalLayer from './layers/LiveHospitalLayer';
+import GibsFireLayer from './layers/GibsFireLayer';
+import BhuvanHazardLayer from './layers/BhuvanHazardLayer';
+import SachetAlertTicker from './SachetAlertTicker';
+import { fetchIndiaEarthquakes } from '../../services/gis/liveFeeds';
+import { formatLatLon } from '../../utils/gis/formatCoords';
+
+const USER_POINTS_STORAGE_KEY = 'cascade-net.userPoints.v1';
 import TacticalTelemetryHUD from './TacticalTelemetryHUD';
 import FloatingCommandDock from './FloatingCommandDock';
 import { normalizeSimulatorDelta } from '../../services/gis/simulatorAdapter';
@@ -64,7 +75,7 @@ import '../../styles/gis.css';
 export default function GisCommandCenter({
   liveIncidents = null,
   initialHudMode = 'tactical',
-  initialMapStyle = 'tactical',
+  initialMapStyle = 'map',
   onSelectFeature = null
 }) {
   const [selectedFeature, setSelectedFeature] = useState(null);
@@ -74,6 +85,94 @@ export default function GisCommandCenter({
   const [mapStyle, setMapStyle] = useState(initialMapStyle);
   const [routes, setRoutes] = useState(DEMO_ROUTES);
   const [isLiveTraffic, setIsLiveTraffic] = useState(false);
+
+  // Live map coordinate telemetry (fed by MapCoordinateTracker):
+  //   cursorCoord = { lat, lng } under the pointer, or null when off-map
+  //   viewInfo    = { lat, lng, zoom } of the current view center
+  const [cursorCoord, setCursorCoord] = useState(null);
+  const [viewInfo, setViewInfo] = useState(null);
+
+  const handleCursorMove = useCallback((lat, lng) => {
+    setCursorCoord(lat == null || lng == null ? null : { lat, lng });
+  }, []);
+
+  const handleViewChange = useCallback((lat, lng, zoom) => {
+    setViewInfo({ lat, lng, zoom });
+  }, []);
+
+  // 5-decimal display (~1 m precision) so the readouts are pasteable into
+  // Google Maps / any WGS-84 tool. The href carries 6 decimals for an exact
+  // pin. Same datum as Google Maps, so these are true real-world coordinates.
+  const centerReadout = viewInfo ? formatLatLon(viewInfo.lat, viewInfo.lng, 5) : '—';
+  const cursorReadout = cursorCoord ? formatLatLon(cursorCoord.lat, cursorCoord.lng, 5) : '—';
+  const centerMapsHref = viewInfo
+    ? `https://www.google.com/maps?q=${viewInfo.lat.toFixed(6)},${viewInfo.lng.toFixed(6)}`
+    : null;
+  const cursorMapsHref = cursorCoord
+    ? `https://www.google.com/maps?q=${cursorCoord.lat.toFixed(6)},${cursorCoord.lng.toFixed(6)}`
+    : null;
+
+  // ---- Operator annotation points (drop-a-pin) -------------------------
+  // Persisted to localStorage so a controller's marked-up locations survive
+  // a reload. Guarded so a private-mode / disabled-storage browser degrades
+  // to in-memory rather than throwing.
+  const [userPoints, setUserPoints] = useState(() => {
+    try {
+      const raw = localStorage.getItem(USER_POINTS_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+  const [addPointMode, setAddPointMode] = useState(false);
+  const [justAddedPointId, setJustAddedPointId] = useState(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(USER_POINTS_STORAGE_KEY, JSON.stringify(userPoints));
+    } catch {
+      /* storage unavailable — keep points in memory for this session */
+    }
+  }, [userPoints]);
+
+  const handleAddPoint = useCallback((lat, lng) => {
+    const id = `up-${Date.now()}`;
+    setUserPoints((prev) => [...prev, { id, lat, lng, name: '', notes: '' }]);
+    setJustAddedPointId(id);
+    setAddPointMode(false); // drop one, then edit; toggle again for the next
+  }, []);
+
+  const handleUpdatePoint = useCallback((id, data) => {
+    setUserPoints((prev) => prev.map((p) => (p.id === id ? { ...p, ...data } : p)));
+  }, []);
+
+  const handleDeletePoint = useCallback((id) => {
+    setUserPoints((prev) => prev.filter((p) => p.id !== id));
+  }, []);
+
+  const toggleAddPointMode = useCallback(() => setAddPointMode((m) => !m), []);
+
+  // ---- Live nationwide data feed: USGS earthquakes (real, not demo) --------
+  const [liveQuakes, setLiveQuakes] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      const q = await fetchIndiaEarthquakes();
+      if (alive) setLiveQuakes(q);
+    };
+    load();
+    const id = setInterval(load, 120000); // refresh every 2 min
+    return () => { alive = false; clearInterval(id); };
+  }, []);
+
+  // Clicking a saved point in the CONTROLS rail flies the map to it and opens
+  // its popup. A monotonic nonce lets the same point be re-focused repeatedly.
+  const [focusPoint, setFocusPoint] = useState({ id: null, nonce: 0 });
+  const handleFocusPoint = useCallback((id) => {
+    setJustAddedPointId(null);
+    setFocusPoint((prev) => ({ id, nonce: prev.nonce + 1 }));
+  }, []);
 
   // Active Incident Data Source Normalization & Precedence
   const incidents = useMemo(() => {
@@ -88,7 +187,7 @@ export default function GisCommandCenter({
 
   // Keyboard Shortcuts ('S' style cycle, 'H' HUD mode cycle, 'R' reset reticle)
   useEffect(() => {
-    const mapStyles = ['standard', 'tactical', 'night', 'risk', 'analysis'];
+    const mapStyles = ['map', 'satellite', 'terrain', 'dark'];
     const handleKeyDown = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       if (e.key === 'h' || e.key === 'H') {
@@ -174,7 +273,11 @@ export default function GisCommandCenter({
     roads: true,
     riskZones: true,
     heatmap: true,
-    routes: true
+    routes: true,
+    quakes: true,
+    liveMed: false, // OSM Overpass real hospitals — off by default (extra network)
+    fires: false, // NASA GIBS active-fire / thermal-anomaly overlay
+    bhuvan: false // ISRO Bhuvan WMS overlay
   });
 
   // Severity Filter ('ALL' | 'CRITICAL' | 'HIGH_PLUS')
@@ -307,7 +410,21 @@ export default function GisCommandCenter({
         </div>
 
         <div className="gis-header-meta d-flex align-items-center gap-2">
-          <span className="gis-header-meta-extra d-none d-lg-inline">LAT 27.285°N LON 88.565°E</span>
+          <span className="gis-header-meta-extra gis-coord-readout d-none d-lg-inline">
+            CTR{' '}
+            {centerMapsHref ? (
+              <a
+                className="gis-coord-link"
+                href={centerMapsHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Open view center in Google Maps (WGS-84)"
+              >
+                {centerReadout}
+              </a>
+            ) : centerReadout}
+            {viewInfo ? <span className="gis-coord-zoom"> · Z{viewInfo.zoom.toFixed(1)}</span> : null}
+          </span>
           <span className="gis-header-meta-extra d-none d-lg-inline">•</span>
           <span className="gis-header-meta-extra d-none d-lg-inline">DATUM WGS-84</span>
           <span className="gis-header-meta-extra d-none d-lg-inline">•</span>
@@ -320,10 +437,24 @@ export default function GisCommandCenter({
       </header>
 
       {/* 2. Map Operating Canvas */}
-      <main className={`gis-workspace flex-grow-1 position-relative gis-style-${mapStyle}`}>
-        <MapView className="gis-dark-tiles">
+      <main className={`gis-workspace flex-grow-1 position-relative gis-style-${mapStyle} ${addPointMode ? 'gis-add-mode' : ''}`}>
+        <MapView className="gis-dark-tiles" basemap={mapStyle}>
           {/* Spatial Reset Controller */}
           <MapResetController resetTrigger={resetTrigger} isSimActive={simScenario !== 'BASELINE'} />
+
+          {/* Live cursor + view-center coordinate telemetry */}
+          <MapCoordinateTracker onCursorMove={handleCursorMove} onViewChange={handleViewChange} />
+
+          {/* Operator annotation points (click-to-drop pins with notes) */}
+          <UserPointsLayer
+            points={userPoints}
+            addMode={addPointMode}
+            openPointId={focusPoint.id || justAddedPointId}
+            flyTo={focusPoint}
+            onAddPoint={handleAddPoint}
+            onUpdatePoint={handleUpdatePoint}
+            onDeletePoint={handleDeletePoint}
+          />
 
           {/* Dynamic Spatial Heatmap Layer (Z-Index Lowest) */}
           <RiskHeatmapLayer
@@ -397,23 +528,45 @@ export default function GisCommandCenter({
             onSelectIncident={handleSelect}
             hudMode={hudMode}
           />
+
+          {/* LIVE USGS earthquakes over India (real nationwide feed) */}
+          <LiveQuakeLayer quakes={liveQuakes} visible={layerVisibility.quakes !== false} />
+
+          {/* LIVE real hospitals/clinics from OpenStreetMap for the current view */}
+          <LiveHospitalLayer visible={layerVisibility.liveMed === true} />
+
+          {/* LIVE NASA active-fire / thermal-anomaly overlay (keyless GIBS WMS) */}
+          <GibsFireLayer visible={layerVisibility.fires === true} />
+
+          {/* ISRO Bhuvan authoritative WMS overlay */}
+          <BhuvanHazardLayer visible={layerVisibility.bhuvan === true} />
         </MapView>
 
-        {/* 3. Left Situation Telemetry HUD (Compact Tactical Instrumentation) */}
-        <TacticalTelemetryHUD
-          incidentCount={filteredIncidents.length}
-          criticalCount={criticalIncidentCount}
-          blockedRoadCount={blockedRoadCount}
-          isolatedVillagesCount={isolatedVillagesCount}
-          rainfall24h={`${maxRainfall24h} mm`}
-          rainfallSeverity="EXTREME"
-          maxRiskScore={maxRiskScore}
-          heatmapSeverity={maxRiskScore >= 80 ? 'CRITICAL' : 'HIGH'}
-          hospitalAccessCount={hospitalAccessBlocked ? '1/2 RESTRICTED' : '2/2 CLEAR'}
-          activeResourcesCount={activeMapState.resources ? activeMapState.resources.length : 3}
-          hudMode={hudMode}
-          weatherSource="SIMULATED WEATHER"
-        />
+        {/* 3. Left Operations Rail — SITUATION telemetry + LEGEND docked
+             together as one full-height rail on desktop. The wrapper is
+             display:contents below 992px, so tablet/mobile keep the original
+             independent floating placement of each panel untouched. */}
+        <div className="gis-left-rail">
+          <TacticalTelemetryHUD
+            incidentCount={filteredIncidents.length}
+            criticalCount={criticalIncidentCount}
+            blockedRoadCount={blockedRoadCount}
+            isolatedVillagesCount={isolatedVillagesCount}
+            rainfall24h={`${maxRainfall24h} mm`}
+            rainfallSeverity="EXTREME"
+            maxRiskScore={maxRiskScore}
+            heatmapSeverity={maxRiskScore >= 80 ? 'CRITICAL' : 'HIGH'}
+            hospitalAccessCount={hospitalAccessBlocked ? '1/2 RESTRICTED' : '2/2 CLEAR'}
+            activeResourcesCount={activeMapState.resources ? activeMapState.resources.length : 3}
+            hudMode={hudMode}
+            weatherSource="SIMULATED WEATHER"
+          />
+
+          <MapLegend hudMode={hudMode} isSimActive={simScenario !== 'BASELINE'} />
+
+          {/* LIVE national disaster alerts (NDMA Sachet CAP feed) */}
+          <SachetAlertTicker hudMode={hudMode} />
+        </div>
 
         {/* 4. Right Tactical Control Matrix */}
         <MapControls
@@ -425,10 +578,12 @@ export default function GisCommandCenter({
           onSetMapStyle={handleSetMapStyle}
           onResetView={handleResetView}
           hudMode={hudMode}
+          addPointMode={addPointMode}
+          onToggleAddPoint={toggleAddPointMode}
+          userPoints={userPoints}
+          onFocusPoint={handleFocusPoint}
+          onDeletePoint={handleDeletePoint}
         />
-
-        {/* 5. Bottom-Left Map Legend */}
-        <MapLegend hudMode={hudMode} isSimActive={simScenario !== 'BASELINE'} />
 
         {/* 6. Floating Command Dock (Single Compact Row Island) */}
         <FloatingCommandDock
@@ -442,7 +597,17 @@ export default function GisCommandCenter({
           activeCorridorName={recommendedRoute ? recommendedRoute.name : 'Western Ridge Alternate'}
           activeCorridorEta={recommendedRoute ? `${recommendedRoute.travelTimeEtaMin || 26} mins` : '26 mins'}
           isLiveTraffic={isLiveTraffic}
+          cursorReadout={cursorReadout}
+          cursorMapsHref={cursorMapsHref}
         />
+
+        {/* 7. Active add-mode banner (the toggle now lives in the CONTROLS
+             rail; this only appears while placing a point). */}
+        {addPointMode ? (
+          <div className="gis-addpoint-banner" role="status">
+            CLICK ANYWHERE ON THE MAP TO DROP A POINT
+          </div>
+        ) : null}
       </main>
     </div>
   );

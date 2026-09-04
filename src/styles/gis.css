@@ -13,25 +13,34 @@
    ======================================================= */
 
 :root {
-  /* Midnight Operations Core Surface Tokens */
-  --bg-app: #101416;
-  --bg-sidebar: #171C1F;
-  --bg-card: #1D2427;
-  --bg-elevated: #242D31;
-  --border-subtle: #303B40;
-  --border-accent: #4F7C8A;
+  /* Midnight Operations Core Surface Tokens — deep tactical near-black
+     with a faint cool cast, giving the vivid accent room to glow. */
+  --bg-app: #0A0E10;
+  --bg-sidebar: #0E1419;
+  --bg-card: #131B20;
+  --bg-elevated: #1C262C;
+  --border-subtle: #223038;
+  --border-accent: #1C7A8C;
+
+  /* Signature Accent — a bright aqua-cyan used deliberately for live
+     elements, active states and framing, always with a soft glow. */
+  --accent: #22D3EE;
+  --accent-strong: #67E8F9;
+  --accent-dim: #0E7A8D;
+  --accent-glow: rgba(34, 211, 238, 0.35);
+  --accent-glow-soft: rgba(34, 211, 238, 0.14);
 
   /* Semantic Status Tokens */
-  --color-critical: #D64545;
-  --color-high: #D97732;
-  --color-warning: #C9A227;
-  --color-operational: #3D8B63;
-  --color-info: #4F7C8A;
+  --color-critical: #F0555A;
+  --color-high: #F08A3C;
+  --color-warning: #E6B92E;
+  --color-operational: #34C77B;
+  --color-info: #22D3EE;
   --color-primary: #3B82F6;
 
   /* Interaction Tokens */
-  --color-selected: #4F7C8A;
-  --color-hover: #303B40;
+  --color-selected: #22D3EE;
+  --color-hover: #223038;
   --color-disabled: #566166;
 
   /* Typography Colors */
@@ -292,34 +301,43 @@ body {
    that terrain/water/urban areas stay visually distinct underneath the
    overlays, per the "map first, basemap must remain readable" requirement. */
 
-/* PRESET 1: STANDARD */
-.gis-style-standard .gis-dark-tiles .leaflet-tile-pane {
-  filter: invert(1) hue-rotate(200deg) brightness(0.82) contrast(1.15) saturate(0.55) !important;
+/* The base tiles are now CARTO "dark matter" — already a dark cartographic
+   style, so these presets are gentle TONE adjustments (no invert). Each keeps
+   the basemap subdued so the incident / risk / route overlays lead the eye. */
+
+/* Base tiles are Esri "Dark Gray Canvas" — a mid-gray canvas served keyless
+   from a fast CDN. These presets pull it down to the deep tactical tone (its
+   natural gray is too light for this theme) while keeping the overlays on top
+   as the dominant signal. */
+
+/* PRESET 1: STANDARD — dark, close to a neutral operations basemap. */
+.gis-style-standard .gis-dark-tiles .gis-base-layer {
+  filter: brightness(0.62) contrast(1.12) saturate(0.9) !important;
 }
 
-/* PRESET 2: TACTICAL HIGH-CONTRAST */
-.gis-style-tactical .gis-dark-tiles .leaflet-tile-pane {
-  filter: invert(1) hue-rotate(195deg) brightness(0.74) contrast(1.3) saturate(0.6) !important;
+/* PRESET 2: TACTICAL — the default. NO filter at all: the topographic basemap
+   shows in full colour and detail, and skipping the filter means zero extra
+   per-pan-frame compositing (fastest possible). Other presets below still
+   offer darkened/greyscale looks on demand. */
+.gis-style-tactical .gis-dark-tiles .gis-base-layer {
+  filter: none !important;
 }
 
-/* PRESET 3: NIGHT */
-.gis-style-night .gis-dark-tiles .leaflet-tile-pane {
-  filter: invert(1) hue-rotate(210deg) brightness(0.52) contrast(1.25) saturate(0.42) !important;
+/* PRESET 3: NIGHT — darkest, for low-light / night-shift viewing. */
+.gis-style-night .gis-dark-tiles .gis-base-layer {
+  filter: brightness(0.4) contrast(1.15) saturate(0.6) !important;
 }
 
-/* PRESET 4: RISK FOCUS — deliberately a touch darker/flatter than TACTICAL
-   so the red/orange risk heatmap and hazard zones (rendered on top) read
-   as the dominant signal, without dropping to unreadable flat gray. */
-.gis-style-risk .gis-dark-tiles .leaflet-tile-pane {
-  filter: invert(1) hue-rotate(195deg) brightness(0.62) contrast(1.25) saturate(0.4) !important;
+/* PRESET 4: RISK FOCUS — flat and dark so the red/orange hazard overlays
+   are unmistakably the dominant signal. */
+.gis-style-risk .gis-dark-tiles .gis-base-layer {
+  filter: brightness(0.46) contrast(1.15) saturate(0.5) !important;
 }
 
-/* PRESET 5: ANALYSIS — intentionally monochrome (grayscale is the point of
-   this mode: it removes basemap color so severity color-coding on markers/
-   zones is the only color in the scene), but kept bright/contrasty enough
-   to stay legible rather than crushed. */
-.gis-style-analysis .gis-dark-tiles .leaflet-tile-pane {
-  filter: invert(1) grayscale(1) brightness(0.78) contrast(1.2) !important;
+/* PRESET 5: ANALYSIS — monochrome, so the only color left in the scene is
+   the severity coding on markers and zones. */
+.gis-style-analysis .gis-dark-tiles .gis-base-layer {
+  filter: grayscale(1) brightness(0.6) contrast(1.15) !important;
 }
 
 /* =======================================================
@@ -724,6 +742,43 @@ body {
   font-size: var(--fs-xs);
   color: var(--text-muted);
   white-space: nowrap;
+}
+
+/* Live coordinate readouts (header view-center + dock cursor). Tabular
+   figures keep every digit the same width, so the value updating ~60×/sec
+   as the pointer moves never nudges the surrounding layout. A min-width
+   reserves room for the widest reading (incl. the "—" placeholder) so the
+   dock island doesn't reflow when the pointer leaves the map. */
+.gis-coord-readout {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: 0.02em;
+}
+.gis-dock-coords.gis-coord-readout {
+  display: inline-block;
+  min-width: 23ch;
+}
+/* Coordinates are clickable → the exact point in Google Maps (proof they're
+   real WGS-84, and useful in the field). Accent-tinted with a hover underline
+   so it reads as a link without shouting. */
+.gis-coord-link {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px dotted transparent;
+  transition: border-color 0.12s ease, color 0.12s ease;
+}
+.gis-coord-link:hover {
+  color: var(--accent-strong);
+  border-bottom-color: var(--accent);
+}
+.gis-dock-coords-label,
+.gis-coord-zoom {
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+.gis-coord-zoom {
+  color: var(--color-info);
+  opacity: 0.85;
 }
 
 .gis-dock-status-dot-pulse {
@@ -1226,5 +1281,683 @@ body {
   .gis-legend-overlay {
     bottom: 58px;
     max-height: 36vh;
+  }
+}
+
+/* =========================================================================
+   TACTICAL HUD REDESIGN v2  — "CASCADE-NET // command console"
+   -------------------------------------------------------------------------
+   A full visual overhaul on top of the existing token system, informed by
+   modern command-center / geospatial-ops dashboards (deep near-black field,
+   one vivid signature accent used with restraint + glow, HUD corner-bracket
+   framing, a masthead header, and strong glowing data typography). These are
+   appearance-only rules — no layout changes — so the mobile *layout* stays
+   exactly as tuned above; only the look is upgraded, everywhere.
+   ========================================================================= */
+
+/* ---- Command masthead ---------------------------------------------------*/
+.gis-header {
+  position: relative;
+  background: linear-gradient(180deg, #101820 0%, var(--bg-sidebar) 100%);
+  border-bottom: 1px solid var(--border-subtle);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+}
+/* One restrained accent hairline under the masthead — the single glow the
+   header earns, kept thin. */
+.gis-header::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--accent-dim), transparent 40%);
+  opacity: 0.6;
+  pointer-events: none;
+}
+.gis-brand-name {
+  letter-spacing: 0.6px;
+}
+.gis-eoc-tag {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+}
+.gis-ticker-dot.live-pulse {
+  box-shadow: 0 0 10px var(--color-critical), 0 0 3px var(--color-critical);
+}
+
+/* ---- Floating panels → framed tactical glass ----------------------------*/
+.gis-telemetry-hud,
+.gis-controls-overlay,
+.gis-legend-overlay,
+.gis-floating-dock {
+  background: linear-gradient(180deg, rgba(19, 27, 32, 0.965), rgba(13, 19, 23, 0.965));
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.92),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 0 1px rgba(34, 211, 238, 0.05);
+}
+.gis-floating-dock { border-radius: 12px; }
+
+/* HUD corner brackets — the signature "targeting frame" motif, drawn as
+   inset pseudo-elements (top-left + bottom-right) so they never fight the
+   panels' overflow:hidden. */
+.gis-telemetry-hud::before,
+.gis-controls-overlay::before,
+.gis-legend-overlay::before,
+.gis-telemetry-hud::after,
+.gis-controls-overlay::after,
+.gis-legend-overlay::after {
+  content: "";
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  pointer-events: none;
+  z-index: 3;
+  border-color: var(--accent);
+  opacity: 0.85;
+}
+.gis-telemetry-hud::before,
+.gis-controls-overlay::before,
+.gis-legend-overlay::before {
+  top: 5px; left: 5px;
+  border-top: 1.5px solid;
+  border-left: 1.5px solid;
+}
+.gis-telemetry-hud::after,
+.gis-controls-overlay::after,
+.gis-legend-overlay::after {
+  bottom: 5px; right: 5px;
+  border-bottom: 1.5px solid;
+  border-right: 1.5px solid;
+}
+
+/* ---- Panel headers ------------------------------------------------------*/
+.gis-panel-header {
+  position: relative;
+  background:
+    linear-gradient(90deg, rgba(34, 211, 238, 0.09), transparent 55%),
+    var(--bg-card);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.gis-panel-header::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: var(--accent);
+}
+.gis-panel-title,
+.gis-hud-title {
+  color: var(--text-primary);
+}
+.gis-section-subtitle { color: var(--accent-dim); }
+
+/* ---- Data typography → glowing readouts ---------------------------------*/
+.gis-hud-row { border-bottom: 1px solid rgba(34, 211, 238, 0.08); }
+.gis-hud-val {
+  font-size: 18px;
+  letter-spacing: 0.4px;
+  font-variant-numeric: tabular-nums;
+}
+.gis-hud-val:not(.critical):not(.warning):not(.operational) {
+  color: var(--text-primary);
+}
+/* Restraint: the bold colored numerals carry the emphasis on their own —
+   no glow. Semantic values keep their status hue, nothing more. */
+
+/* ---- Controls → accent-lit active states --------------------------------*/
+.gis-btn-compact,
+.gis-btn-filter,
+.gis-style-pill,
+.gis-btn-reset-full,
+.gis-dock-btn {
+  border-radius: 3px;
+}
+.gis-btn-compact:hover,
+.gis-btn-filter:hover,
+.gis-style-pill:hover {
+  border-color: var(--accent-dim);
+}
+.gis-btn-compact.active {
+  background: rgba(34, 211, 238, 0.12);
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+.gis-dock-btn.is-active {
+  background: rgba(34, 211, 238, 0.13);
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+.gis-btn-reset-full { color: var(--accent); }
+.gis-btn-reset-full:hover {
+  border-color: var(--accent);
+  background: rgba(34, 211, 238, 0.08);
+}
+
+/* ---- Coordinate readouts ------------------------------------------------*/
+.gis-coord-zoom { color: var(--accent); }
+.gis-dock-coords-label { color: var(--accent-dim); }
+.gis-dock-sector-badge {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+}
+
+/* =========================================================================
+   DOCKED OPERATIONS SHELL  (>= 992px, desktop only)
+   -------------------------------------------------------------------------
+   The professional map-app layout (per the ESRI Calcite design system and
+   map-first UX): instead of translucent "HUD islands" scattered over the
+   map, the panels DOCK to the edges as solid side rails, the map is inset
+   to fill the whole center, and the command dock becomes a slim bottom
+   status strip. The basemap fills its own clean rectangle so data overlays
+   read clearly, and the chrome frames the map instead of covering it.
+   Tablet / mobile (< 992px) keep the existing floating layout untouched.
+   ========================================================================= */
+/* The left rail wrapper is invisible to layout by default (display:contents),
+   so below 992px the SITUATION and LEGEND panels keep their original,
+   independent floating placement exactly as tuned for tablet/mobile. */
+.gis-left-rail { display: contents; }
+
+@media (min-width: 992px) {
+  /* Left rail — SITUATION telemetry + LEGEND as one docked full-height
+     column. The wrapper becomes the rail; its children flow inside it and
+     shed their individual floating chrome. */
+  .gis-left-rail {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 206px;
+    z-index: 900;
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border-subtle);
+    box-shadow: 2px 0 20px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+  }
+  .gis-left-rail .gis-telemetry-hud,
+  .gis-left-rail .gis-legend-overlay {
+    position: static !important;
+    width: 100% !important;
+    max-height: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  /* SITUATION sits at the top at its natural height; LEGEND takes the rest
+     and scrolls internally — filling the rail instead of leaving dead space
+     or floating a card over the map. */
+  .gis-left-rail .gis-telemetry-hud {
+    flex: 0 0 auto;
+    border-bottom: 1px solid var(--border-subtle) !important;
+  }
+  .gis-left-rail .gis-legend-overlay {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  /* No corner brackets on the flush docked rails. */
+  .gis-left-rail .gis-telemetry-hud::before,
+  .gis-left-rail .gis-telemetry-hud::after,
+  .gis-controls-overlay::before,
+  .gis-controls-overlay::after { display: none !important; }
+
+  /* Right rail — CONTROLS, docked full height */
+  .gis-controls-overlay {
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: auto !important;
+    width: 196px !important;
+    max-height: none !important;
+    border: none !important;
+    border-left: 1px solid var(--border-subtle) !important;
+    border-radius: 0 !important;
+    box-shadow: -2px 0 20px rgba(0, 0, 0, 0.5) !important;
+    background: var(--bg-sidebar) !important;
+  }
+
+  /* Map inset to fill the center rectangle between the rails, above the
+     status strip. The ResizeObserver in MapView re-fits Leaflet to this. */
+  .gis-map-container {
+    top: 0 !important;
+    left: 206px !important;
+    right: 196px !important;
+    bottom: 42px !important;
+    width: auto !important;
+    height: auto !important;
+  }
+
+  /* Bottom status strip — the former floating command dock, now flush. */
+  .gis-floating-dock {
+    left: 206px !important;
+    right: 196px !important;
+    bottom: 0 !important;
+    top: auto !important;
+    transform: none !important;
+    width: auto !important;
+    max-width: none !important;
+    height: 42px !important;
+    min-height: 42px !important;
+    padding: 4px 16px !important;
+    border: none !important;
+    border-top: 1px solid var(--border-subtle) !important;
+    border-radius: 0 !important;
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.45) !important;
+    background: var(--bg-sidebar) !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    justify-content: flex-start !important;
+  }
+
+  /* Nav controls at the map's top-right, just inside the right rail. */
+  .leaflet-top.leaflet-left {
+    left: auto !important;
+    right: 208px !important;
+    top: 10px !important;
+  }
+}
+
+/* ---- Zoom control clear of the SITUATION panel (768–991px only) ---------*/
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .leaflet-top.leaflet-left {
+    left: 224px !important;
+    top: 8px !important;
+  }
+}
+
+/* =========================================================================
+   PRECISION REFINEMENT PASS — typography rhythm, control polish, density.
+   Global (desktop + mobile); appearance only, no layout changes.
+   ========================================================================= */
+
+/* ---- Bigger, clearly readable UI text (bumped up on request). ---- */
+.gis-panel-header { padding: 11px 13px; min-height: 40px; }
+.gis-panel-title, .gis-hud-title { font-size: 15px; letter-spacing: 0.8px; }
+.gis-panel-body { padding: 13px 14px 16px; }
+
+/* ---- SITUATION metric rows ---- */
+.gis-hud-row { padding: 7px 0; gap: 10px; }
+.gis-hud-label { font-size: 13.5px; letter-spacing: 0.4px; color: var(--text-secondary); }
+.gis-hud-val { font-size: 18px; letter-spacing: 0.3px; }
+.gis-hud-footer { font-size: 12px; letter-spacing: 0.4px; }
+
+/* ---- Section subtitles ---- */
+.gis-section-subtitle { font-size: 13px; letter-spacing: 1px; color: var(--text-secondary); }
+
+/* ---- Legend / control text ---- */
+.gis-legend-row { font-size: 14px; }
+.gis-legend-section-title, .gis-legend-subtitle { font-size: 12.5px; }
+.gis-btn-compact, .gis-btn-filter, .gis-style-pill, .gis-dock-btn { font-size: 13px; }
+.gis-header-title { font-size: 16px; }
+.gis-ticker-text { font-size: 13px; }
+
+/* ---- Right rail: cleaner, more tactile toggle controls ---- */
+.gis-btn-compact {
+  padding: 6px 8px;
+  min-height: 31px;
+  border-radius: 4px;
+  justify-content: flex-start;
+  gap: 7px;
+}
+.gis-indicator-dot { width: 6px; height: 6px; }
+.gis-btn-compact.active .gis-indicator-dot {
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent-glow);
+}
+.gis-btn-filter,
+.gis-style-pill { min-height: 29px; border-radius: 4px; letter-spacing: 0.4px; }
+.gis-btn-reset-full { min-height: 33px; border-radius: 4px; letter-spacing: 0.6px; }
+
+/* Hairline dividers between the right-rail control groups for clearer
+   sectioning (the sections already carry gap; this adds the rule line). */
+.gis-controls-section + .gis-controls-section {
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ---- Legend rhythm ---- */
+.gis-legend-row { padding: 3px 0; }
+
+/* =========================================================================
+   OPERATOR ANNOTATION POINTS  (drop-a-pin feature)
+   ========================================================================= */
+
+/* Crosshair cursor while placing a point */
+.gis-add-mode .leaflet-container { cursor: crosshair !important; }
+
+/* The pin marker itself */
+.gis-user-pin { filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.6)); }
+.gis-user-pin.is-selected { filter: drop-shadow(0 0 8px var(--accent-glow)); }
+
+/* Floating "add point" toggle — top-left of the map area */
+.gis-addpoint-toggle {
+  position: absolute;
+  top: 10px;
+  left: 8px;
+  z-index: 905;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+  background: rgba(15, 21, 25, 0.94);
+  border: 1px solid var(--accent-dim);
+  border-radius: 5px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+}
+.gis-addpoint-toggle:hover { border-color: var(--accent); background: rgba(34, 211, 238, 0.10); }
+.gis-addpoint-toggle.active { color: #06121A; background: var(--accent); border-color: var(--accent); }
+.gis-addpoint-count {
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #06121A;
+  font-size: 10px;
+  line-height: 15px;
+  text-align: center;
+}
+
+/* Active-mode banner at the top-center of the map */
+.gis-addpoint-banner {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 905;
+  padding: 6px 15px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: var(--accent-strong);
+  background: rgba(15, 21, 25, 0.96);
+  border: 1px solid var(--accent-dim);
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  animation: gisBannerPulse 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes gisBannerPulse { 0%, 100% { opacity: 0.82; } 50% { opacity: 1; } }
+
+/* Point editor form inside the themed Leaflet popup */
+.gis-userpoint-form { padding: 11px 12px 12px; font-family: var(--font-ui); }
+.gis-userpoint-heading {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1.4px;
+  color: var(--accent);
+  padding-left: 6px;
+  border-left: 2px solid var(--accent);
+  margin-bottom: 9px;
+}
+.gis-userpoint-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  margin: 7px 0 3px;
+}
+.gis-userpoint-input,
+.gis-userpoint-textarea {
+  width: 100%;
+  background: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  padding: 6px 8px;
+  outline: none;
+  resize: vertical;
+}
+.gis-userpoint-input:focus,
+.gis-userpoint-textarea:focus { border-color: var(--accent); }
+.gis-userpoint-coord {
+  margin-top: 9px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-secondary);
+}
+.gis-userpoint-actions { display: flex; gap: 8px; margin-top: 11px; }
+.gis-userpoint-save,
+.gis-userpoint-delete {
+  flex: 1;
+  padding: 6px 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.gis-userpoint-save { background: var(--accent); color: #06121A; border-color: var(--accent); }
+.gis-userpoint-save:hover { background: var(--accent-strong); }
+.gis-userpoint-delete {
+  background: transparent;
+  color: var(--color-critical);
+  border-color: rgba(240, 85, 90, 0.4);
+}
+.gis-userpoint-delete:hover { background: rgba(240, 85, 90, 0.12); }
+
+/* Annotation controls live in the CONTROLS rail now (the floating map toggle
+   was removed). Toggle + a saved-points list the operator can revisit. */
+.gis-btn-annotate {
+  padding: 7px 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  color: var(--accent);
+  background: rgba(34, 211, 238, 0.08);
+  border: 1px solid var(--accent-dim);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+}
+.gis-btn-annotate:hover { background: rgba(34, 211, 238, 0.14); border-color: var(--accent); }
+.gis-btn-annotate.active { color: #06121A; background: var(--accent); border-color: var(--accent); }
+
+.gis-point-empty {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 2px 0;
+}
+.gis-point-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 2px;
+  max-height: 168px;
+  overflow-y: auto;
+}
+.gis-point-item { display: flex; align-items: stretch; gap: 2px; }
+.gis-point-item-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 7px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+}
+.gis-point-item-main:hover { border-color: var(--accent-dim); background: var(--bg-elevated); }
+.gis-point-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 5px var(--accent-glow);
+  flex-shrink: 0;
+}
+.gis-point-name {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gis-point-del {
+  width: 26px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.gis-point-del:hover {
+  color: var(--color-critical);
+  border-color: rgba(240, 85, 90, 0.4);
+  background: rgba(240, 85, 90, 0.1);
+}
+
+/* =========================================================================
+   NDMA SACHET — LIVE NATIONAL ALERT TICKER
+   Shares the floating-panel visual language of the legend/HUD. On desktop it
+   docks into the left operations rail (below the legend); on tablet/mobile it
+   floats bottom-right, above the command dock, and defaults collapsed.
+   ========================================================================= */
+.gis-sachet-overlay {
+  position: absolute;
+  right: 8px;
+  bottom: 54px;
+  width: 250px;
+  z-index: 901;
+  background-color: rgba(23, 28, 31, 0.94);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.85);
+  overflow: hidden;
+  max-height: min(46vh, calc(100% - 62px));
+  display: flex;
+  flex-direction: column;
+  transition: width 0.18s ease, opacity 0.18s ease;
+}
+.gis-sachet-overlay.collapsed {
+  width: 150px;
+}
+.gis-sachet-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-critical);
+  box-shadow: 0 0 6px var(--color-critical);
+  animation: gisPulse 1.6s infinite;
+  flex-shrink: 0;
+}
+.gis-sachet-count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--bg-sidebar, #0b0f12);
+  background: var(--color-critical);
+  border-radius: 8px;
+  padding: 0 6px;
+  margin-left: 2px;
+}
+.gis-sachet-body {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px 8px 8px;
+}
+.gis-sachet-sub {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.gis-sachet-msg {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  padding: 4px 0;
+}
+.gis-sachet-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.gis-sachet-item {
+  border-left: 2px solid var(--accent-dim);
+  padding: 2px 0 4px 7px;
+}
+.gis-sachet-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  margin-bottom: 2px;
+}
+.gis-sachet-cat {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.gis-sachet-agency {
+  color: var(--text-secondary, #9fb0b8);
+}
+.gis-sachet-time {
+  color: var(--text-muted);
+  margin-left: auto;
+}
+.gis-sachet-text {
+  font-size: var(--fs-sm);
+  line-height: 1.35;
+  color: var(--text-primary);
+}
+
+@media (min-width: 992px) {
+  /* Dock the ticker into the left rail, beneath the legend. Give the legend a
+     natural height and let the ticker take a capped, internally-scrolling
+     block at the bottom so both are always usable. */
+  .gis-left-rail .gis-legend-overlay {
+    flex: 0 1 auto;
+  }
+  .gis-left-rail .gis-sachet-overlay {
+    position: static !important;
+    width: 100% !important;
+    max-height: 42% !important;
+    border: none !important;
+    border-top: 1px solid var(--border-subtle) !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    flex: 1 1 auto;
+    min-height: 0;
   }
 }

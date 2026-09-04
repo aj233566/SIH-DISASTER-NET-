@@ -52,6 +52,31 @@ export function createIncidentIcon(severity = 'Warning', isSelected = false) {
 }
 
 /**
+ * User Annotation Pin — an accent teardrop for operator-dropped points, so
+ * they read as clearly distinct from the incident/facility/resource markers.
+ */
+export function createUserPinIcon(isSelected = false) {
+  const color = '#22D3EE';
+  const h = isSelected ? 40 : 34;
+  const w = Math.round(h * 0.72);
+  const html = `
+    <div class="gis-user-pin ${isSelected ? 'is-selected' : ''}">
+      <svg width="${w}" height="${h}" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 0C5.4 0 0 5.2 0 11.6 0 20.4 12 32 12 32s12-11.6 12-20.4C24 5.2 18.6 0 12 0Z" fill="#0E1419" stroke="${color}" stroke-width="2"/>
+        <circle cx="12" cy="11.5" r="4.4" fill="${color}"/>
+      </svg>
+    </div>
+  `;
+  return L.divIcon({
+    html,
+    className: 'gis-custom-icon',
+    iconSize: [w, h],
+    iconAnchor: [Math.round(w / 2), h],
+    popupAnchor: [0, -h + 6]
+  });
+}
+
+/**
  * 2. Hospital Marker Icon (Rounded Square with Medical Cross)
  */
 export function createHospitalIcon(roadAccess = 'Open', isSelected = false) {

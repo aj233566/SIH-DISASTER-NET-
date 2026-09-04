@@ -22,12 +22,15 @@ function FloatingCommandDock({
   onResetView = () => {},
   activeCorridorName = 'Western Ridge Alternate',
   activeCorridorEta = '26 mins',
-  isLiveTraffic = false
+  isLiveTraffic = false,
+  cursorReadout = '—',
+  cursorMapsHref = null
 }) {
   const mapStyles = [
-    { key: 'standard', label: 'STD' },
-    { key: 'tactical', label: 'TAC' },
-    { key: 'night', label: 'NIGHT' }
+    { key: 'map', label: 'MAP' },
+    { key: 'satellite', label: 'SAT' },
+    { key: 'terrain', label: 'TER' },
+    { key: 'dark', label: 'DARK' }
   ];
 
   const hudModes = [
@@ -42,7 +45,20 @@ function FloatingCommandDock({
       <div className="gis-dock-section gis-dock-meta-section d-flex align-items-center gap-2">
         <div className="gis-dock-telemetry-text d-flex align-items-center gap-2">
           <span className="gis-dock-sector-badge">SIKKIM/NH-10</span>
-          <span className="gis-dock-coords d-none d-sm-inline">27.285°N 88.565°E</span>
+          <span className="gis-dock-coords gis-coord-readout d-none d-sm-inline">
+            <span className="gis-dock-coords-label">CUR</span>{' '}
+            {cursorMapsHref ? (
+              <a
+                className="gis-coord-link"
+                href={cursorMapsHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Open cursor position in Google Maps (WGS-84)"
+              >
+                {cursorReadout}
+              </a>
+            ) : cursorReadout}
+          </span>
           <span className="gis-dock-status-dot-pulse" title="Telemetry Stream Active" />
         </div>
       </div>

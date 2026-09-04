@@ -1,6 +1,74 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
+import L from 'leaflet';
 import { DEMO_MAP_CONFIG } from '../../data/gis/demoGisData';
+import TilePrefetcher from './TilePrefetcher';
+
+/**
+ * Google-Maps-style basemap modes, each a real keyless Esri tile service
+ * (no CSS filters — every mode is genuinely that map, which is both more
+ * legible and far cheaper to pan than filtering one basemap on the fly):
+ *   • map       — World Street Map (the default road map)
+ *   • satellite — World Imagery (Google-Earth-style aerial/satellite)
+ *   • terrain   — World Topographic (shaded relief, contours, rivers)
+ *   • dark      — Dark Gray Canvas (muted dark operations backdrop)
+ * `labels` names a transparent reference overlay for modes whose base has no
+ * place names baked in (satellite, dark).
+ */
+export const BASEMAPS = {
+  // Every basemap here is FREE, KEYLESS, and has no per-month tile quota — so
+  // the app can never hit a paid/expired-key wall (the reason we moved off
+  // TomTom's 200k-tiles/month evaluation tier). All are plain <img> raster
+  // tiles → render reliably everywhere, no WebGL/vector blanking, no GPU load.
+  //
+  // MAP = OpenStreetMap standard. The most detailed free map of India at
+  // street/village level (every hamlet, track and lane), served from OSM's
+  // global Fastly CDN. The {s} subdomain rotation (a/b/c) lets the browser pull
+  // tiles over parallel connections, which is the single biggest cold-load
+  // speed win on a bandwidth-limited link.
+  map: {
+    type: 'raster',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    subdomains: 'abc',
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 19
+  },
+  // DARK = Esri Dark Gray Canvas (muted operations backdrop) + a matching
+  // reference overlay for place labels.
+  dark: {
+    type: 'raster',
+    url: 'https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri',
+    maxNativeZoom: 16, // Esri dark canvas tops out at z16; upscale beyond
+    maxZoom: 19,
+    labels: 'https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}'
+  },
+  satellite: {
+    // Esri World Imagery (Google-Earth-style aerial) + a transparent reference
+    // overlay for road/place labels.
+    type: 'raster',
+    url: 'https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics',
+    maxZoom: 19,
+    labels: 'https://services.arcgisonline.com/arcgis/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'
+  },
+  // TERRAIN = Esri World Topographic (shaded relief, contours, rivers) — the
+  // mountain terrain that matters for landslide/flood context.
+  terrain: {
+    type: 'raster',
+    url: 'https://services.arcgisonline.com/arcgis/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri, HERE, Garmin, USGS, NGA',
+    maxZoom: 19
+  }
+};
+
+/* India geographic bounds (incl. island territories) — the map is geofenced
+   here so operators can zoom out to the whole nation but not drift off into
+   empty ocean / other countries. */
+export const INDIA_BOUNDS = L.latLngBounds(
+  L.latLng(4.0, 65.0),   // south-west (covers Indira Point / Lakshadweep)
+  L.latLng(39.0, 100.0)  // north-east (covers Ladakh / Arunachal / Andaman)
+);
 
 /**
  * Leaflet measures its container's pixel size once, at construction, and
@@ -26,9 +94,17 @@ function MapAutoResize() {
   const map = useMap();
   useEffect(() => {
     const container = map.getContainer();
-    const observer = new ResizeObserver(() => map.invalidateSize());
+    let t = null;
+    // Debounce: only re-measure once the container size has SETTLED. Firing
+    // invalidateSize on every intermediate resize frame (e.g. during a panel
+    // open/close transition) forces repeated tile re-fetches — the "reload
+    // flash" — so we wait for the transition to finish, then fit once.
+    const observer = new ResizeObserver(() => {
+      clearTimeout(t);
+      t = setTimeout(() => map.invalidateSize({ pan: false }), 250);
+    });
     observer.observe(container);
-    return () => observer.disconnect();
+    return () => { clearTimeout(t); observer.disconnect(); };
   }, [map]);
   return null;
 }
@@ -45,8 +121,10 @@ export default function MapView({
   center = DEMO_MAP_CONFIG.initialCenter,
   zoom = DEMO_MAP_CONFIG.initialZoom,
   className = "gis-dark-tiles",
+  basemap = 'map',
   children
 }) {
+  const base = BASEMAPS[basemap] || BASEMAPS.map;
   // Tile-loading indicator: TileLayer fires 'loading' whenever a new batch
   // of tiles is requested (initial mount, every pan/zoom that reveals new
   // tiles) and 'load' once that batch has fully arrived. Already-rendered
@@ -88,6 +166,19 @@ export default function MapView({
         maxZoom={DEMO_MAP_CONFIG.maxZoom}
         scrollWheelZoom={true}
         zoomControl={true}
+        /* Geofence to India: operators can zoom out to the whole nation but
+           the viewport is repelled from drifting off into open ocean / other
+           countries (maxBoundsViscosity:1 = a hard edge). Also prevents the
+           MapLibre engine throwing WebGL projection errors at polar latitudes. */
+        maxBounds={INDIA_BOUNDS}
+        maxBoundsViscosity={1.0}
+        /* PERFORMANCE: render every vector overlay (risk zones, heatmap,
+           routes, roads, villages) onto a single <canvas> instead of one SVG
+           DOM node per shape. With this many semi-transparent circles and
+           polygons, SVG reflow on each pan/zoom frame is the dominant cause
+           of lag; a canvas renderer draws them all in one pass and is the
+           single biggest smoothness win here (per Leaflet perf guidance). */
+        preferCanvas={true}
         /* Leaflet's drag-inertia glide (the momentum panning after you
            release a drag) defaults to inertiaMaxSpeed: Infinity — the
            velocity computed from the last pointer-move events before
@@ -100,21 +191,66 @@ export default function MapView({
            triggering velocity, without changing how a normal drag feels. */
         inertiaMaxSpeed={1500}
         inertiaDeceleration={3400}
+        /* Smoothness tuning (see the CASCADE-NET smoothness pass):
+           - zoomSnap:0 + zoomDelta:0.5 unlock fractional zoom levels, so a
+             wheel tick or +/- glides part-way instead of jumping a whole
+             integer level (the "jumpy zoom" complaint).
+           - wheelPxPerZoomLevel:120 (up from the 60 default) makes each notch
+             of the wheel cover half as much zoom, so scrolling reads as a
+             gradual push-in rather than a lurch. */
+        zoomSnap={0.5}
+        zoomDelta={0.5}
+        wheelPxPerZoomLevel={110}
         style={{ height: '100%', width: '100%' }}
         className={className}
       >
         <MapAutoResize />
 
-        {/* OpenStreetMap Standard Base Tile Layer */}
+        {/* Predictive tile prefetch → warms the cache so pans/zooms resolve
+           from local disk in milliseconds. Re-seeds when the basemap changes. */}
+        <TilePrefetcher
+          key={`prefetch-${basemap}`}
+          urlTemplate={base.url}
+          subdomains={base.subdomains || 'abc'}
+          maxNativeZoom={base.maxNativeZoom || base.maxZoom || 19}
+        />
+
+        {/* Active basemap (raster). `key` forces a clean layer swap on mode
+           change. TomTom for street/dark/satellite, Esri for terrain. */}
         <TileLayer
-          attribution="&copy; <a href=&quot;https://www.openstreetmap.org/copyright&quot;>OpenStreetMap</a> contributors"
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          maxZoom={19}
+          key={basemap}
+          className="gis-base-layer"
+          attribution={base.attribution}
+          url={base.url}
+          subdomains={base.subdomains || 'abc'}
+          tileSize={base.tileSize || 256}
+          zoomOffset={base.zoomOffset || 0}
+          maxNativeZoom={base.maxNativeZoom}
+          maxZoom={base.maxZoom || 19}
+          keepBuffer={3}
+          updateWhenZooming={false}
+          crossOrigin={true}
           eventHandlers={{
             loading: handleTileLoadStart,
             load: handleTileLoadDone
           }}
         />
+
+        {/* Transparent roads/labels overlay for the satellite mode. */}
+        {base.labels ? (
+          <TileLayer
+            key={`${basemap}-labels`}
+            className="gis-ref-layer"
+            url={base.labels}
+            tileSize={base.tileSize || 256}
+            zoomOffset={base.zoomOffset || 0}
+            maxNativeZoom={base.maxNativeZoom}
+            maxZoom={base.maxZoom || 19}
+            keepBuffer={3}
+            updateWhenZooming={false}
+            crossOrigin={true}
+          />
+        ) : null}
 
         {/* Slot for future child layers (Incidents, Facilities, Roads, Routes) */}
         {children}
