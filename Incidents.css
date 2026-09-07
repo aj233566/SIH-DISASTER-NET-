@@ -1,0 +1,492 @@
+/* =========================================
+   INCIDENTS - CASCADE-NET MIDNIGHT OPERATIONS
+   ========================================= */
+
+.incidents-page {
+  min-height: calc(100vh - 56px);
+  padding: 24px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* =========================================
+   HEADER
+   ========================================= */
+
+.incidents-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.incidents-title {
+  margin: 0 0 6px;
+  color: var(--text-primary);
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.incidents-subtitle {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.incidents-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--safe);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.incidents-status::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--safe);
+}
+
+/* =========================================
+   SUMMARY CARDS
+   ========================================= */
+
+.incidents-summary {
+  margin-bottom: 24px;
+}
+
+.incident-summary-card {
+  height: 100%;
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.incident-summary-card:hover {
+  background: var(--surface-elevated);
+  border-color: var(--info);
+}
+
+.incident-summary-label {
+  margin-bottom: 8px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.incident-summary-value {
+  color: var(--text-primary);
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+/* =========================================
+   MAIN SECTION
+   ========================================= */
+
+.incidents-section {
+  margin-bottom: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.incidents-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  background: var(--surface-elevated);
+  border-bottom: 1px solid var(--border);
+}
+
+.incidents-section-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* =========================================
+   SEARCH
+   ========================================= */
+
+.incident-search {
+  width: 260px;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text-primary);
+  font-size: 12px;
+  outline: none;
+}
+
+.incident-search::placeholder {
+  color: var(--text-muted);
+}
+
+.incident-search:focus {
+  border-color: var(--info);
+}
+
+/* =========================================
+   FILTERS
+   ========================================= */
+
+.incident-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px 18px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.incident-filter-btn {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.incident-filter-btn:hover {
+  background: var(--surface-elevated);
+  border-color: var(--info);
+  color: var(--text-primary);
+}
+
+.incident-filter-btn.active {
+  background: var(--info);
+  border-color: var(--info);
+  color: var(--text-primary);
+}
+
+/* =========================================
+   TABLE
+   ========================================= */
+
+.incidents-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.incidents-table {
+  width: 100%;
+  margin: 0;
+  border-collapse: collapse;
+  background: var(--surface);
+  color: var(--text-secondary);
+}
+
+.incidents-table thead th {
+  padding: 12px 14px;
+  background: var(--surface-elevated);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.incidents-table tbody td {
+  padding: 13px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 13px;
+  vertical-align: middle;
+}
+
+.incidents-table tbody tr:hover td {
+  background: var(--surface-elevated);
+}
+
+.incidents-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.incident-id {
+  color: var(--info) !important;
+  font-weight: 700;
+}
+
+.incident-location {
+  color: var(--text-primary) !important;
+  font-weight: 500;
+}
+
+/* =========================================
+   SEVERITY
+   ========================================= */
+
+.severity-critical {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  background: rgba(214, 69, 69, 0.15);
+  border: 1px solid rgba(214, 69, 69, 0.4);
+  border-radius: 4px;
+  color: var(--critical);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.severity-high {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  background: rgba(217, 119, 50, 0.15);
+  border: 1px solid rgba(217, 119, 50, 0.4);
+  border-radius: 4px;
+  color: var(--high-risk);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.severity-moderate {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  background: rgba(201, 162, 39, 0.15);
+  border: 1px solid rgba(201, 162, 39, 0.4);
+  border-radius: 4px;
+  color: var(--warning);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.severity-low {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  background: rgba(61, 139, 99, 0.15);
+  border: 1px solid rgba(61, 139, 99, 0.4);
+  border-radius: 4px;
+  color: var(--safe);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* =========================================
+   STATUS
+   ========================================= */
+
+.status-active,
+.status-responding,
+.status-resolved,
+.status-monitoring {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.status-active {
+  background: rgba(214, 69, 69, 0.15);
+  border: 1px solid rgba(214, 69, 69, 0.4);
+  color: var(--critical);
+}
+
+.status-responding {
+  background: rgba(217, 119, 50, 0.15);
+  border: 1px solid rgba(217, 119, 50, 0.4);
+  color: var(--high-risk);
+}
+
+.status-resolved {
+  background: rgba(61, 139, 99, 0.15);
+  border: 1px solid rgba(61, 139, 99, 0.4);
+  color: var(--safe);
+}
+
+.status-monitoring {
+  background: rgba(79, 124, 138, 0.15);
+  border: 1px solid rgba(79, 124, 138, 0.4);
+  color: var(--info);
+}
+
+/* =========================================
+   VIEW BUTTON
+   ========================================= */
+
+.incident-view-btn {
+  padding: 5px 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--info);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.incident-view-btn:hover {
+  background: var(--info);
+  border-color: var(--info);
+  color: var(--text-primary);
+}
+
+/* =========================================
+   EMPTY STATE
+   ========================================= */
+
+.incidents-empty {
+  padding: 40px 20px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* =========================================
+   RESPONSIVE
+   ========================================= */
+
+@media (max-width: 992px) {
+  .incidents-page {
+    padding: 18px;
+  }
+
+  .incident-search {
+    width: 220px;
+  }
+}
+
+@media (max-width: 768px) {
+  .incidents-page {
+    padding: 14px;
+  }
+
+  .incidents-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .incidents-title {
+    font-size: 23px;
+  }
+
+  .incidents-status {
+    align-self: flex-start;
+  }
+
+  .incidents-section-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .incident-search {
+    width: 100%;
+  }
+
+  .incidents-table {
+    min-width: 850px;
+  }
+}
+
+@media (max-width: 480px) {
+  .incidents-page {
+    padding: 10px;
+  }
+
+  .incidents-title {
+    font-size: 21px;
+  }
+
+  .incidents-subtitle {
+    font-size: 12px;
+  }
+
+  .incident-summary-card {
+    padding: 15px;
+  }
+
+  .incident-summary-value {
+    font-size: 26px;
+  }
+
+  .incidents-section-header {
+    padding: 14px;
+  }
+
+  .incident-filters {
+    padding: 12px 14px;
+  }
+}
+/* =========================================
+   BOOTSTRAP OVERRIDE - DARK THEME
+   ========================================= */
+
+.incidents-page .card,
+.incidents-page .card-header,
+.incidents-page .card-body {
+  background-color: var(--surface) !important;
+  color: var(--text-primary) !important;
+}
+
+.incidents-page .card-header {
+  background-color: var(--surface-elevated) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.incidents-page .card-header h1,
+.incidents-page .card-header h2,
+.incidents-page .card-header h3,
+.incidents-page .card-header h4,
+.incidents-page .card-header h5,
+.incidents-page .card-header h6 {
+  color: var(--text-primary) !important;
+}
+
+.incidents-page .table,
+.incidents-page .table-responsive {
+  background-color: var(--surface) !important;
+  color: var(--text-secondary) !important;
+}
+
+.incidents-page .table thead,
+.incidents-page .table thead th {
+  background-color: var(--surface-elevated) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border) !important;
+}
+
+.incidents-page .table tbody td {
+  background-color: var(--surface) !important;
+  color: var(--text-secondary) !important;
+  border-color: var(--border) !important;
+}
+
+.incidents-page .table tbody tr:hover td {
+  background-color: var(--surface-elevated) !important;
+}
