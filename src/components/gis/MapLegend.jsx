@@ -13,13 +13,20 @@ import React, { useState, useEffect } from 'react';
  * ============================================================================
  */
 export default function MapLegend({ hudMode = 'tactical' }) {
-  const isMobileInitial = typeof window !== 'undefined' ? (window.innerWidth < 768 || window.innerHeight < 480) : false;
-  const [isCollapsed, setIsCollapsed] = useState(hudMode !== 'tactical' || isMobileInitial);
+  const isDesktop = () => typeof window !== 'undefined' && window.innerWidth >= 992;
+  const [isCollapsed, setIsCollapsed] = useState(!isDesktop() && hudMode !== 'tactical');
 
+  // Docked desktop rail always shows the legend; tablet/mobile collapses in the
+  // denser HUD modes. Live on resize so it never sticks collapsed.
   useEffect(() => {
-    if (hudMode === 'minimal' || hudMode === 'operator' || isMobileInitial) setIsCollapsed(true);
-    if (hudMode === 'tactical' && !isMobileInitial) setIsCollapsed(false);
-  }, [hudMode, isMobileInitial]);
+    const apply = () => {
+      if (isDesktop()) return setIsCollapsed(false);
+      setIsCollapsed(hudMode !== 'tactical' || window.innerHeight < 480);
+    };
+    apply();
+    window.addEventListener('resize', apply);
+    return () => window.removeEventListener('resize', apply);
+  }, [hudMode]);
 
   return (
     <div className={`gis-legend-overlay ${isCollapsed ? 'collapsed' : ''}`}>

@@ -75,31 +75,44 @@ export async function fetchHospitalsInBounds(b) {
     `(node["amenity"~"^(hospital|clinic)$"](${bbox});` +
     `way["amenity"~"^(hospital|clinic)$"](${bbox}););` +
     `out center 120;`;
-  try {
-    const res = await fetch('https://overpass-api.de/api/interpreter', {
-      method: 'POST',
-      body: query
-    });
-    if (!res.ok) return [];
-    const data = await res.json();
-    return (data.elements || [])
-      .map((el) => {
-        const lat = el.lat ?? (el.center && el.center.lat);
-        const lng = el.lon ?? (el.center && el.center.lon);
-        if (typeof lat !== 'number' || typeof lng !== 'number') return null;
-        const tags = el.tags || {};
-        return {
-          id: `${el.type}/${el.id}`,
-          lat,
-          lng,
-          name: tags.name || (tags.amenity === 'clinic' ? 'Clinic' : 'Hospital'),
-          kind: tags.amenity || 'hospital'
-        };
-      })
-      .filter(Boolean);
-  } catch (e) {
-    return [];
+  // The main Overpass endpoint frequently rate-limits and returns an XML/HTML
+  // error page (not JSON) under load. Try several public mirrors in turn, and
+  // only parse when the response really is JSON — so a busy server never breaks
+  // the layer, and a working mirror still fills it in.
+  const MIRRORS = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
+  ];
+  for (const url of MIRRORS) {
+    try {
+      const res = await fetch(url, { method: 'POST', body: query });
+      if (!res.ok) continue;
+      const ct = res.headers.get('content-type') || '';
+      const text = await res.text();
+      if (!ct.includes('json') && !text.trim().startsWith('{')) continue; // error page
+      const data = JSON.parse(text);
+      const out = (data.elements || [])
+        .map((el) => {
+          const lat = el.lat ?? (el.center && el.center.lat);
+          const lng = el.lon ?? (el.center && el.center.lon);
+          if (typeof lat !== 'number' || typeof lng !== 'number') return null;
+          const tags = el.tags || {};
+          return {
+            id: `${el.type}/${el.id}`,
+            lat,
+            lng,
+            name: tags.name || (tags.amenity === 'clinic' ? 'Clinic' : 'Hospital'),
+            kind: tags.amenity || 'hospital'
+          };
+        })
+        .filter(Boolean);
+      return out; // success (even if empty for this area)
+    } catch (e) {
+      // this mirror failed — try the next
+    }
   }
+  return [];
 }
 
 /**
@@ -113,6 +126,18 @@ export async function fetchHospitalsInBounds(b) {
  * these are surfaced as a live alert ticker rather than map markers.
  * @returns {Promise<Array<{id,title,agency,category,time,link}>>}
  */
+// The Sachet feed carries alerts in many Indian scripts (Devanagari, Telugu,
+// Bengali, Tamil, Odia, Gujarati, Kannada, Malayalam, Gurmukhi…). We surface
+// ENGLISH-only, so drop any alert whose text is written in a non-Latin script.
+const INDIC_SCRIPT_RE = /[ऀ-෿਀-੿]/; // Devanagari→Malayalam + Gurmukhi/Gujarati
+function isEnglishText(text) {
+  if (!text) return false;
+  const latin = (text.match(/[A-Za-z]/g) || []).length;
+  const indic = (text.match(/[ऀ-෿਀-੿]/g) || []).length;
+  // Keep only text that is predominantly Latin letters (real English alerts).
+  return latin >= 8 && indic <= latin * 0.15;
+}
+
 export async function fetchSachetAlerts() {
   const URL = '/sachet/cap_public_website/rss/rss_india.xml';
   try {
@@ -130,6 +155,7 @@ export async function fetchSachetAlerts() {
         };
         const title = q('title');
         if (!title) return null;
+        if (!isEnglishText(title) || INDIC_SCRIPT_RE.test(title)) return null; // English only
         const author = q('author'); // e.g. "controlroom@ndma.gov.in (IMD Agartala)"
         const agencyMatch = author.match(/\(([^)]+)\)/);
         const pub = q('pubDate');

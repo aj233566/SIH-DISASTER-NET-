@@ -25,13 +25,21 @@ function TacticalTelemetryHUD({
   hudMode = 'tactical',
   weatherSource = 'SIMULATED WEATHER'
 }) {
-  const isMobileInitial = typeof window !== 'undefined' ? (window.innerWidth < 768 || window.innerHeight < 480) : false;
-  const [isCollapsed, setIsCollapsed] = useState(hudMode === 'minimal' || isMobileInitial);
+  const isDesktop = () => typeof window !== 'undefined' && window.innerWidth >= 992;
+  const [isCollapsed, setIsCollapsed] = useState(!isDesktop() && hudMode === 'minimal');
 
+  // On the docked desktop rail the panel always shows its content; on
+  // tablet/mobile it collapses per HUD mode. Re-evaluated live on resize so it
+  // can never get stuck collapsed from a small window size at mount.
   useEffect(() => {
-    if (hudMode === 'minimal') setIsCollapsed(true);
-    if (hudMode === 'tactical' && !isMobileInitial) setIsCollapsed(false);
-  }, [hudMode, isMobileInitial]);
+    const apply = () => {
+      if (isDesktop()) return setIsCollapsed(false);
+      setIsCollapsed(hudMode === 'minimal' || window.innerHeight < 480);
+    };
+    apply();
+    window.addEventListener('resize', apply);
+    return () => window.removeEventListener('resize', apply);
+  }, [hudMode]);
 
   return (
     <div className={`gis-telemetry-hud ${isCollapsed ? 'collapsed' : ''}`}>
@@ -101,13 +109,13 @@ function TacticalTelemetryHUD({
 
           {/* Row 6: AI Hazard Heatmap Risk */}
           <div className="gis-hud-row d-flex align-items-center justify-content-between">
-            <span className="gis-hud-label">MAX RISK SCORE</span>
+            <span className="gis-hud-label">MAX RISK</span>
             <span className="gis-hud-val critical">{maxRiskScore}/100</span>
           </div>
 
           {/* Row 7: Hospital Access */}
           <div className="gis-hud-row d-flex align-items-center justify-content-between">
-            <span className="gis-hud-label">HOSPITAL ACCESS</span>
+            <span className="gis-hud-label">HOSPITALS</span>
             <span className={`gis-hud-val ${hospitalAccessCount.includes('RESTRICTED') || hospitalAccessCount === '1/2' ? 'warning' : 'operational'}`}>
               {hospitalAccessCount}
             </span>

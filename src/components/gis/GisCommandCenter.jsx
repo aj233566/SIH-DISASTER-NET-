@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback, useTransition } from 'react';
 import MapView from './MapView';
+import DisasterZonesLayer from './layers/DisasterZonesLayer';
+import OpenFreeMapLayer from './layers/OpenFreeMapLayer';
+import FloodSimLayer from './layers/FloodSimLayer';
+import FloodSimControl from './FloodSimControl';
 import IncidentLayer from './layers/IncidentLayer';
 import FacilityLayer from './layers/FacilityLayer';
 import ResourceLayer from './layers/ResourceLayer';
@@ -83,6 +87,9 @@ export default function GisCommandCenter({
   const [simScenario, setSimScenario] = useState('BASELINE');
   const [hudMode, setHudMode] = useState(initialHudMode);
   const [mapStyle, setMapStyle] = useState(initialMapStyle);
+  const [mapInstance, setMapInstance] = useState(null);
+  const [floodActive, setFloodActive] = useState(false);
+  const [floodLevel, setFloodLevel] = useState(0);
   const [routes, setRoutes] = useState(DEMO_ROUTES);
   const [isLiveTraffic, setIsLiveTraffic] = useState(false);
 
@@ -277,7 +284,8 @@ export default function GisCommandCenter({
     quakes: true,
     liveMed: false, // OSM Overpass real hospitals — off by default (extra network)
     fires: false, // NASA GIBS active-fire / thermal-anomaly overlay
-    bhuvan: false // ISRO Bhuvan WMS overlay
+    bhuvan: false, // ISRO Bhuvan WMS overlay
+    ofm: false // OpenFreeMap streamed detailed vector basemap (free, keyless)
   });
 
   // Severity Filter ('ALL' | 'CRITICAL' | 'HIGH_PLUS')
@@ -438,7 +446,7 @@ export default function GisCommandCenter({
 
       {/* 2. Map Operating Canvas */}
       <main className={`gis-workspace flex-grow-1 position-relative gis-style-${mapStyle} ${addPointMode ? 'gis-add-mode' : ''}`}>
-        <MapView className="gis-dark-tiles" basemap={mapStyle}>
+        <MapView className="gis-dark-tiles" basemap={mapStyle} onMapReady={setMapInstance}>
           {/* Spatial Reset Controller */}
           <MapResetController resetTrigger={resetTrigger} isSimActive={simScenario !== 'BASELINE'} />
 
@@ -540,7 +548,24 @@ export default function GisCommandCenter({
 
           {/* ISRO Bhuvan authoritative WMS overlay */}
           <BhuvanHazardLayer visible={layerVisibility.bhuvan === true} />
+
+          {/* Active disaster theatres across India (labelled hazard rings) */}
+          <DisasterZonesLayer visible={layerVisibility.zones !== false} />
+
+          {/* OpenFreeMap detailed vector basemap — streamed free, no download */}
+          <OpenFreeMapLayer visible={layerVisibility.ofm === true} />
+
+          {/* Real-time flood simulation (Assam / Brahmaputra) */}
+          <FloodSimLayer active={floodActive} level={floodLevel} />
         </MapView>
+
+        {/* Real-time flood simulation timeline (Assam / Brahmaputra) */}
+        <FloodSimControl
+          active={floodActive}
+          onToggleActive={(v) => { setFloodActive(v); if (v && mapInstance) mapInstance.setView([26.5, 92.6], 8); }}
+          level={floodLevel}
+          onLevelChange={setFloodLevel}
+        />
 
         {/* 3. Left Operations Rail — SITUATION telemetry + LEGEND docked
              together as one full-height rail on desktop. The wrapper is
@@ -556,7 +581,7 @@ export default function GisCommandCenter({
             rainfallSeverity="EXTREME"
             maxRiskScore={maxRiskScore}
             heatmapSeverity={maxRiskScore >= 80 ? 'CRITICAL' : 'HIGH'}
-            hospitalAccessCount={hospitalAccessBlocked ? '1/2 RESTRICTED' : '2/2 CLEAR'}
+            hospitalAccessCount={hospitalAccessBlocked ? '1/2' : '2/2'}
             activeResourcesCount={activeMapState.resources ? activeMapState.resources.length : 3}
             hudMode={hudMode}
             weatherSource="SIMULATED WEATHER"

@@ -90,21 +90,41 @@ export const INDIA_BOUNDS = L.latLngBounds(
  * it reacts to the container's actual box size changing, regardless of
  * what caused the change, instead of only to the browser window resizing.
  */
+/** Emits the live Leaflet map instance up to the parent once it's ready, so
+    non-child UI (the offline-download panel, zone quick-jump) can drive it. */
+function MapReadyEmitter({ onReady }) {
+  const map = useMap();
+  useEffect(() => {
+    if (onReady) onReady(map);
+  }, [map, onReady]);
+  return null;
+}
+
 function MapAutoResize() {
   const map = useMap();
   useEffect(() => {
     const container = map.getContainer();
     let t = null;
-    // Debounce: only re-measure once the container size has SETTLED. Firing
-    // invalidateSize on every intermediate resize frame (e.g. during a panel
-    // open/close transition) forces repeated tile re-fetches — the "reload
-    // flash" — so we wait for the transition to finish, then fit once.
+    const fit = () => map.invalidateSize({ pan: false });
+
+    // (a) Staggered re-measures after mount. The map's initial size is measured
+    // once at construction; if the surrounding layout is still settling (fonts
+    // swapping in, panels reflowing, CSS finishing parse), that first measure can
+    // be a small/stale rect and the map only paints a corner. Re-fitting several
+    // times over the first ~1.5s reliably catches the final size.
+    const timers = [60, 200, 500, 1000, 1500].map((ms) => setTimeout(fit, ms));
+
+    // (b) ResizeObserver: debounce so we re-fit ONCE the container box settles,
+    // but also fit immediately on the first change so a corner-only render is
+    // corrected without waiting out the debounce.
+    let firstObserved = true;
     const observer = new ResizeObserver(() => {
+      if (firstObserved) { firstObserved = false; fit(); }
       clearTimeout(t);
-      t = setTimeout(() => map.invalidateSize({ pan: false }), 250);
+      t = setTimeout(fit, 250);
     });
     observer.observe(container);
-    return () => { clearTimeout(t); observer.disconnect(); };
+    return () => { timers.forEach(clearTimeout); clearTimeout(t); observer.disconnect(); };
   }, [map]);
   return null;
 }
@@ -122,6 +142,7 @@ export default function MapView({
   zoom = DEMO_MAP_CONFIG.initialZoom,
   className = "gis-dark-tiles",
   basemap = 'map',
+  onMapReady,
   children
 }) {
   const base = BASEMAPS[basemap] || BASEMAPS.map;
@@ -205,6 +226,7 @@ export default function MapView({
         className={className}
       >
         <MapAutoResize />
+        {onMapReady && <MapReadyEmitter onReady={onMapReady} />}
 
         {/* Predictive tile prefetch → warms the cache so pans/zooms resolve
            from local disk in milliseconds. Re-seeds when the basemap changes. */}

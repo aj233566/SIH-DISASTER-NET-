@@ -27,9 +27,8 @@ function relTime(iso) {
 }
 
 export default function SachetAlertTicker({ hudMode = 'tactical' }) {
-  const isMobileInitial =
-    typeof window !== 'undefined' ? window.innerWidth < 768 || window.innerHeight < 480 : false;
-  const [isCollapsed, setIsCollapsed] = useState(hudMode !== 'tactical' || isMobileInitial);
+  const isDesktop = () => typeof window !== 'undefined' && window.innerWidth >= 992;
+  const [isCollapsed, setIsCollapsed] = useState(!isDesktop() && hudMode !== 'tactical');
   const [alerts, setAlerts] = useState([]);
   const [status, setStatus] = useState('loading'); // loading | ok | empty | error
   const timer = useRef(null);
@@ -55,9 +54,14 @@ export default function SachetAlertTicker({ hudMode = 'tactical' }) {
   }, []);
 
   useEffect(() => {
-    if (hudMode === 'minimal' || hudMode === 'operator' || isMobileInitial) setIsCollapsed(true);
-    if (hudMode === 'tactical' && !isMobileInitial) setIsCollapsed(false);
-  }, [hudMode, isMobileInitial]);
+    const apply = () => {
+      if (isDesktop()) return setIsCollapsed(false);
+      setIsCollapsed(hudMode !== 'tactical' || window.innerHeight < 480);
+    };
+    apply();
+    window.addEventListener('resize', apply);
+    return () => window.removeEventListener('resize', apply);
+  }, [hudMode]);
 
   const count = alerts.length;
 

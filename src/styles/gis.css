@@ -66,11 +66,11 @@
      headings get real visual weight.
      ===================================================== */
   --fs-2xs: 10px;   /* legal/attribution text only */
-  --fs-xs: 11px;    /* dense metadata, footers, HUD labels */
-  --fs-sm: 12.5px;  /* section subtitles, panel titles, badges */
-  --fs-base: 13.5px;/* buttons, dock controls, legend rows */
-  --fs-md: 15px;    /* header brand, ticker, panel body text */
-  --fs-lg: 17px;    /* HUD critical values, headings */
+  --fs-xs: 13.5px;  /* dense metadata, footers, HUD labels */
+  --fs-sm: 15px;    /* section subtitles, panel titles, badges */
+  --fs-base: 16.5px;/* buttons, dock controls, legend rows */
+  --fs-md: 18px;    /* header brand, ticker, panel body text */
+  --fs-lg: 22px;    /* HUD critical values, headings */
   --fs-xl: 20px;    /* emphasis-only, used sparingly */
 }
 
@@ -550,10 +550,10 @@ body {
 }
 
 .gis-hud-label {
-  font-size: var(--fs-xs);
+  font-size: var(--fs-sm);
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-family: var(--font-mono);
   white-space: nowrap;
   overflow: hidden;
@@ -588,9 +588,9 @@ body {
    6. RIGHT OPERATIONAL CONTROL RAIL (body content)
    ======================================================= */
 .gis-section-subtitle {
-  font-size: var(--fs-xs);
+  font-size: var(--fs-sm);
   font-weight: 700;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.4px;
   font-family: var(--font-mono);
@@ -1521,6 +1521,10 @@ body {
     box-shadow: -2px 0 20px rgba(0, 0, 0, 0.5) !important;
     background: var(--bg-sidebar) !important;
   }
+  /* The docked desktop rail must NOT shrink to the mobile collapsed width —
+     that clipped the panel to a broken "// CONTROL" sliver. Keep it full. */
+  .gis-controls-overlay.collapsed { width: 196px !important; }
+  .gis-controls-overlay .gis-collapse-btn { display: none; }
 
   /* Map inset to fill the center rectangle between the rails, above the
      status strip. The ResizeObserver in MapView re-fits Leaflet to this. */
@@ -1944,12 +1948,14 @@ body {
      natural height and let the ticker take a capped, internally-scrolling
      block at the bottom so both are always usable. */
   .gis-left-rail .gis-legend-overlay {
-    flex: 0 1 auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
   }
   .gis-left-rail .gis-sachet-overlay {
     position: static !important;
     width: 100% !important;
-    max-height: 42% !important;
+    max-height: 38% !important;
     border: none !important;
     border-top: 1px solid var(--border-subtle) !important;
     border-radius: 0 !important;
@@ -1961,3 +1967,339 @@ body {
     min-height: 0;
   }
 }
+
+/* =========================================================================
+   OFFLINE MAP PACK — download control + disaster-zone quick-jump
+   Top-centre floating panel. Downloads India overview + every zone into cache
+   so the basemap works instant/offline; live data still overlays when online.
+   ========================================================================= */
+.gis-offline-panel {
+  position: absolute;
+  bottom: 58px;               /* DOWN side — above the status strip */
+  left: 216px;                /* just clear of the left rail */
+  width: 430px;
+  max-width: 40vw;
+  z-index: 901;
+  background: rgba(14, 20, 25, 0.97);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.85);
+  overflow: hidden;
+  font-family: var(--font-ui);
+}
+.gis-offline-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;         /* bigger */
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.gis-offline-net {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.gis-offline-net.on {
+  background: #2FD67B;
+  box-shadow: 0 0 6px #2FD67B;
+}
+.gis-offline-net.off {
+  background: var(--color-critical);
+  box-shadow: 0 0 6px var(--color-critical);
+}
+.gis-offline-title {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.6px;
+  color: var(--text-primary);
+}
+.gis-offline-ready {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: #2FD67B;
+}
+.gis-offline-caret {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--text-muted);
+  font-size: var(--fs-lg);
+  line-height: 1;
+}
+.gis-offline-body {
+  padding: 12px 14px 14px;
+}
+.gis-offline-dl-btn {
+  width: 100%;
+  padding: 11px 12px;
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: var(--accent-strong);
+  background: rgba(34, 211, 238, 0.1);
+  border: 1px solid var(--accent-dim);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.gis-offline-dl-btn:hover:not(:disabled) {
+  background: rgba(34, 211, 238, 0.2);
+  border-color: var(--accent);
+}
+.gis-offline-dl-btn:disabled {
+  cursor: progress;
+  opacity: 0.85;
+}
+.gis-offline-dl-btn.ne {
+  margin-top: 6px;
+  color: #FFD9A8;
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.5);
+}
+.gis-offline-dl-btn.ne:hover:not(:disabled) {
+  background: rgba(245, 158, 11, 0.22);
+  border-color: #F59E0B;
+}
+.gis-offline-bar {
+  margin-top: 7px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.gis-offline-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-dim), var(--accent-strong));
+  transition: width 0.2s ease;
+}
+.gis-offline-msg {
+  margin-top: 7px;
+  font-size: var(--fs-xs);
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+.gis-offline-msg.err {
+  color: var(--color-critical);
+}
+.gis-offline-sub {
+  margin: 13px 0 7px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+}
+.gis-offline-zones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.gis-offline-zone {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 11px;
+  font-size: 12.5px;
+  color: var(--text-primary);
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.gis-offline-zone:hover {
+  border-color: var(--accent);
+  background: rgba(34, 211, 238, 0.08);
+}
+.gis-offline-zone-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+/* Dark tooltip for the disaster-zone rings */
+.leaflet-tooltip.gis-zone-tip {
+  background: rgba(14, 20, 25, 0.96);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.7);
+}
+.leaflet-tooltip.gis-zone-tip::before { display: none; }
+
+/* =========================================================================
+   REAL-TIME FLOOD SIMULATION — timeline + live tally (bottom-centre)
+   ========================================================================= */
+.gis-flood-panel {
+  position: absolute;
+  bottom: 58px;               /* DOWN side — above the status strip */
+  left: 60%;                  /* centred in the map area, right of the offline panel */
+  transform: translateX(-50%);
+  width: 560px;               /* bigger */
+  max-width: 46vw;
+  z-index: 902;
+  background: rgba(10, 18, 28, 0.96);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.85);
+  overflow: hidden;
+  font-family: var(--font-ui);
+}
+.gis-flood-panel.collapsed {
+  width: auto;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.gis-flood-start {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  color: #ffffff;
+  background: linear-gradient(180deg, #2f92da 0%, #1c6cad 100%);
+  border: 1px solid #5cb6ec;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(0, 0, 0, 0.3);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.15s ease;
+}
+.gis-flood-start:hover {
+  background: linear-gradient(180deg, #3aa0ea 0%, #2478bd 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8);
+}
+.gis-flood-start .gis-flood-dot {
+  background: #eaf6ff;
+  box-shadow: 0 0 8px #bfe3ff;
+}
+.gis-flood-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(43, 127, 196, 0.12);
+}
+.gis-flood-live {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--color-critical);
+  box-shadow: 0 0 6px var(--color-critical);
+  animation: gisPulse 1.5s infinite;
+}
+.gis-flood-title {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 14.5px;
+  letter-spacing: 0.5px;
+  color: var(--text-primary);
+}
+.gis-flood-clock {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--accent-strong);
+}
+.gis-flood-x {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.gis-flood-x:hover { color: var(--color-critical); }
+.gis-flood-body { padding: 13px; }
+.gis-flood-row { display: flex; align-items: center; gap: 12px; }
+.gis-flood-btn {
+  flex-shrink: 0;
+  padding: 9px 16px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-strong);
+  background: rgba(34, 211, 238, 0.12);
+  border: 1px solid var(--accent-dim);
+  border-radius: 4px;
+  cursor: pointer;
+  min-width: 110px;
+}
+.gis-flood-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+.gis-flood-btn:hover { background: rgba(34, 211, 238, 0.24); }
+/* CSS-drawn play/pause icons (no fragile emoji/unicode) */
+.gis-flood-ico { display: inline-block; flex-shrink: 0; }
+.gis-flood-ico.play {
+  width: 0; height: 0;
+  border-style: solid;
+  border-width: 6px 0 6px 10px;
+  border-color: transparent transparent transparent currentColor;
+}
+.gis-flood-ico.pause {
+  width: 10px; height: 12px;
+  border-left: 3px solid currentColor;
+  border-right: 3px solid currentColor;
+}
+/* Small pulsing indicator for the collapsed START pill */
+.gis-flood-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: #4fb0e6;
+  box-shadow: 0 0 7px #4fb0e6;
+  flex-shrink: 0;
+}
+.gis-flood-slider { flex: 1; height: 6px; accent-color: #2b7fc4; cursor: pointer; }
+.gis-flood-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 13px;
+}
+.gis-flood-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 11px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+}
+.gis-flood-k {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+}
+.gis-flood-v {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+.gis-flood-v.water { color: #4fb0e6; }
+.gis-flood-v.crit { color: var(--color-critical); }
+.gis-flood-v.warn { color: var(--color-warning, #F59E0B); }

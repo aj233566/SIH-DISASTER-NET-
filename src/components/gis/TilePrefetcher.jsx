@@ -26,18 +26,22 @@ export default function TilePrefetcher({ urlTemplate, subdomains = 'abc', maxNat
 
   const capZoom = (z) => (typeof maxNativeZoom === 'number' ? Math.min(z, maxNativeZoom) : z);
 
-  // (1) Seed the national overview once per basemap, at idle.
+  // (1) Seed the low-zoom national overview once per basemap — but only AFTER
+  // a delay so it never competes with the initial map view loading (that was
+  // part of the "slow first load"). Small + gentle.
   useEffect(() => {
     if (!urlTemplate) return;
     const ctrl = new AbortController();
-    runWhenIdle(() => {
-      warmBounds(urlTemplate, subdomains, INDIA_BOUNDS, 3, capZoom(6), {
-        concurrency: 4,
-        maxTiles: 320,
-        signal: ctrl.signal
+    const t = setTimeout(() => {
+      runWhenIdle(() => {
+        warmBounds(urlTemplate, subdomains, INDIA_BOUNDS, 3, capZoom(5), {
+          concurrency: 2,
+          maxTiles: 80,
+          signal: ctrl.signal
+        });
       });
-    });
-    return () => ctrl.abort();
+    }, 4000);
+    return () => { clearTimeout(t); ctrl.abort(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlTemplate, subdomains]);
 
@@ -45,43 +49,34 @@ export default function TilePrefetcher({ urlTemplate, subdomains = 'abc', maxNat
   const prefetchAroundView = () => {
     const z = Math.round(map.getZoom());
     const b = map.getBounds();
-    const padW = (b.getEast() - b.getWest()) * 0.6;
-    const padH = (b.getNorth() - b.getSouth()) * 0.6;
+    // Warm only a MODEST ring around the viewport. A big ring floods the network
+    // with hundreds of parallel requests that compete with the tiles you're
+    // actually looking at — which is what made panning feel slow/laggy. Small +
+    // low-concurrency keeps the visible map fast while still smoothing short pans.
+    const padW = (b.getEast() - b.getWest()) * 0.35;
+    const padH = (b.getNorth() - b.getSouth()) * 0.35;
     const padded = {
       west: b.getWest() - padW,
       east: b.getEast() + padW,
       south: b.getSouth() - padH,
       north: b.getNorth() + padH
     };
-    const view = {
-      west: b.getWest(),
-      east: b.getEast(),
-      south: b.getSouth(),
-      north: b.getNorth()
-    };
     const ctrl = new AbortController();
-    // Next-pan ring at the current zoom.
+    // Just the immediate next-pan ring at the current zoom, gently.
     warmBounds(urlTemplate, subdomains, padded, z, z, {
-      concurrency: 4,
-      maxTiles: 180,
+      concurrency: 2,
+      maxTiles: 90,
       signal: ctrl.signal
     });
-    // Next zoom-in: only the current viewport one level deeper (bounded).
-    const deeper = capZoom(z + 1);
-    if (deeper > z) {
-      warmBounds(urlTemplate, subdomains, view, deeper, deeper, {
-        concurrency: 3,
-        maxTiles: 160,
-        signal: ctrl.signal
-      });
-    }
   };
 
   useMapEvents({
     moveend() {
       if (!urlTemplate) return;
       clearTimeout(moveTimer.current);
-      moveTimer.current = setTimeout(() => runWhenIdle(prefetchAroundView), 500);
+      // Wait for the pan to fully settle before warming, so prefetch never
+      // competes with the tiles loading for the view you just moved to.
+      moveTimer.current = setTimeout(() => runWhenIdle(prefetchAroundView), 900);
     }
   });
 

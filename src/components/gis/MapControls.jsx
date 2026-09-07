@@ -47,7 +47,8 @@ function MapControls({
     { key: 'quakes', label: 'QUAKE', title: 'LIVE USGS Earthquakes (last 24h)' },
     { key: 'liveMed', label: 'MED+', title: 'LIVE hospitals & clinics for this view (OpenStreetMap) — zoom in to load' },
     { key: 'fires', label: 'FIRE', title: 'LIVE active fires / thermal anomalies (NASA GIBS · VIIRS 375m)' },
-    { key: 'bhuvan', label: 'ISRO', title: 'ISRO Bhuvan authoritative WMS overlay' }
+    { key: 'bhuvan', label: 'ISRO', title: 'ISRO Bhuvan authoritative WMS overlay' },
+    { key: 'ofm', label: 'HD MAP', title: 'OpenFreeMap detailed vector map (free, streamed, no download)' }
   ];
 
   const mapStyles = [
