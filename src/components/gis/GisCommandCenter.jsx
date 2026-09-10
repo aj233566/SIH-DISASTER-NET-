@@ -22,8 +22,10 @@ import LiveHospitalLayer from './layers/LiveHospitalLayer';
 import GibsFireLayer from './layers/GibsFireLayer';
 import BhuvanHazardLayer from './layers/BhuvanHazardLayer';
 import SachetAlertTicker from './SachetAlertTicker';
+import CitizenPanel from './CitizenPanel';
 import { fetchIndiaEarthquakes } from '../../services/gis/liveFeeds';
 import { formatLatLon } from '../../utils/gis/formatCoords';
+import { selectCitizenFocus } from '../../utils/gis/citizenView';
 
 const USER_POINTS_STORAGE_KEY = 'cascade-net.userPoints.v1';
 import TacticalTelemetryHUD from './TacticalTelemetryHUD';
@@ -80,8 +82,13 @@ export default function GisCommandCenter({
   liveIncidents = null,
   initialHudMode = 'tactical',
   initialMapStyle = 'map',
-  onSelectFeature = null
+  onSelectFeature = null,
+  role = 'authority'
 }) {
+  // Role-based composition: 'authority' is the full tactical command center
+  // (unchanged); 'citizen' reuses the SAME map + layer components but shows
+  // only high-value, actionable features with a simple action panel.
+  const isCitizen = role === 'citizen';
   const [selectedFeature, setSelectedFeature] = useState(null);
   const [resetTrigger, setResetTrigger] = useState(0);
   const [simScenario, setSimScenario] = useState('BASELINE');
@@ -270,23 +277,46 @@ export default function GisCommandCenter({
     return () => { isMounted = false; };
   }, [simScenario, activeMapState, incidents]);
 
-  // Layer Visibility State (9 Independent Subsystems)
-  const [layerVisibility, setLayerVisibility] = useState({
-    incidents: true,
-    villages: true,
-    hospitals: true,
-    shelters: true,
-    resources: true,
-    roads: true,
-    riskZones: true,
-    heatmap: true,
-    routes: true,
-    quakes: true,
-    liveMed: false, // OSM Overpass real hospitals — off by default (extra network)
-    fires: false, // NASA GIBS active-fire / thermal-anomaly overlay
-    bhuvan: false, // ISRO Bhuvan WMS overlay
-    ofm: false // OpenFreeMap streamed detailed vector basemap (free, keyless)
-  });
+  // Layer Visibility State (role-dependent defaults). Authority shows the full
+  // operational stack; citizen starts with only the actionable subset
+  // (danger zones, critical incidents, safe route, shelters, hospitals) and
+  // hides everything else so the view is never overwhelming.
+  const [layerVisibility, setLayerVisibility] = useState(() =>
+    isCitizen
+      ? {
+          incidents: true,
+          villages: false,
+          hospitals: true,
+          shelters: true,
+          resources: false,
+          roads: false,
+          riskZones: true,
+          heatmap: false,
+          routes: true,
+          quakes: false,
+          zones: false, // hide nationwide disaster rings
+          liveMed: false,
+          fires: false,
+          bhuvan: false,
+          ofm: false
+        }
+      : {
+          incidents: true,
+          villages: true,
+          hospitals: true,
+          shelters: true,
+          resources: true,
+          roads: true,
+          riskZones: true,
+          heatmap: true,
+          routes: true,
+          quakes: true,
+          liveMed: false, // OSM Overpass real hospitals — off by default (extra network)
+          fires: false, // NASA GIBS active-fire / thermal-anomaly overlay
+          bhuvan: false, // ISRO Bhuvan WMS overlay
+          ofm: false // OpenFreeMap streamed detailed vector basemap (free, keyless)
+        }
+  );
 
   // Severity Filter ('ALL' | 'CRITICAL' | 'HIGH_PLUS')
   const [severityFilter, setSeverityFilter] = useState('ALL');
@@ -337,6 +367,13 @@ export default function GisCommandCenter({
     setResetTrigger((prev) => prev + 1);
   }, []);
 
+  // Citizen action panel → fly the SHARED map to a shelter/hospital/danger.
+  const handleCitizenFocusLocation = useCallback((lat, lng, zoom = 14) => {
+    if (mapInstance && typeof lat === 'number' && typeof lng === 'number') {
+      mapInstance.setView([lat, lng], zoom, { animate: true });
+    }
+  }, [mapInstance]);
+
   // Memoized Filtered Incidents to prevent recreating arrays on every render
   const filteredIncidents = useMemo(() => {
     return incidents.filter((inc) => {
@@ -345,6 +382,38 @@ export default function GisCommandCenter({
       return true;
     });
   }, [incidents, severityFilter]);
+
+  // ---- Citizen-mode curated subsets & focus (computed from the SAME data) ----
+  // Only the high-value, actionable features reach the citizen map.
+  const citizenIncidents = useMemo(
+    () => filteredIncidents.filter(
+      (i) => (i.severity === 'Critical' || i.severity === 'High') &&
+             String(i.status || 'Active').toLowerCase() !== 'resolved'
+    ),
+    [filteredIncidents]
+  );
+  const citizenRiskZones = useMemo(
+    () => (activeMapState.riskZones || []).filter(
+      (z) => z.riskLevel === 'Critical' || z.riskLevel === 'High'
+    ),
+    [activeMapState.riskZones]
+  );
+  // Nearest-to-danger selection powering the CitizenPanel (see citizenView.js).
+  const citizenFocus = useMemo(
+    () => selectCitizenFocus({
+      incidents: filteredIncidents,
+      riskZones: activeMapState.riskZones,
+      shelters: activeMapState.shelters,
+      hospitals: activeMapState.hospitals,
+      routes
+    }),
+    [filteredIncidents, activeMapState, routes]
+  );
+  // Citizen sees only the single recommended safe route, not every corridor.
+  const citizenRoutes = useMemo(
+    () => (citizenFocus.primaryRoute ? [citizenFocus.primaryRoute] : []),
+    [citizenFocus]
+  );
 
   // Dynamic Multi-Factor Risk Heatmap Nodes (45% Risk Score + 30% Incident Density + 25% Rainfall Severity)
   const heatmapNodes = useMemo(() => {
@@ -395,8 +464,28 @@ export default function GisCommandCenter({
   }, [onSelectFeature]);
 
   return (
-    <div className="gis-app-wrapper d-flex flex-column vh-100">
+    <div className={`gis-app-wrapper gis-role-${role} d-flex flex-column vh-100`}>
+      {/* Citizen simplified header — brand + one clear danger pill, no jargon */}
+      {isCitizen ? (
+        <header className="gis-header gis-header-citizen d-flex align-items-center justify-content-between gap-2 px-3">
+          <div className="d-flex align-items-center gap-2">
+            <span className="gis-brand-name">CASCADE-NET</span>
+            <span className="gis-cz-header-sub">Live Safety Map</span>
+          </div>
+          <span className={`gis-cz-header-pill gis-cz-status-${
+            String(citizenFocus.dangerLevel).toUpperCase() === 'CRITICAL' ? 'danger' :
+            String(citizenFocus.dangerLevel).toUpperCase() === 'HIGH' ? 'high' :
+            String(citizenFocus.dangerLevel).toUpperCase() === 'LOW' ? 'safe' : 'warning'
+          }`}>
+            {String(citizenFocus.dangerLevel).toUpperCase() === 'LOW'
+              ? 'NO ACTIVE ALERT'
+              : `DANGER · ${String(citizenFocus.dangerLevel).toUpperCase()}`}
+          </span>
+        </header>
+      ) : null}
+
       {/* 1. Institutional Top Operational Header */}
+      {!isCitizen && (
       <header className="gis-header d-flex align-items-center justify-content-between gap-2 px-2 px-md-3">
         <div className="gis-header-left d-flex align-items-center gap-2">
           <span className="gis-eoc-tag">EOC-GIS</span>
@@ -443,6 +532,7 @@ export default function GisCommandCenter({
           <span className="d-none d-sm-inline" style={{ color: 'var(--color-info)' }}>{hudMode.toUpperCase()}</span>
         </div>
       </header>
+      )}
 
       {/* 2. Map Operating Canvas */}
       <main className={`gis-workspace flex-grow-1 position-relative gis-style-${mapStyle} ${addPointMode ? 'gis-add-mode' : ''}`}>
@@ -473,7 +563,7 @@ export default function GisCommandCenter({
 
           {/* Landslide Risk Zones Layer */}
           <RiskZoneLayer
-            riskZones={activeMapState.riskZones}
+            riskZones={isCitizen ? citizenRiskZones : activeMapState.riskZones}
             visible={layerVisibility.riskZones}
             selectedRiskZoneId={selectedFeature && selectedFeature.id}
             onSelectRiskZone={handleSelect}
@@ -491,7 +581,7 @@ export default function GisCommandCenter({
 
           {/* Emergency Evacuation & Relief Logistics Routes */}
           <RouteLayer
-            routes={routes}
+            routes={isCitizen ? citizenRoutes : routes}
             visible={layerVisibility.routes}
             selectedRouteId={selectedFeature && selectedFeature.id}
             onSelectRoute={handleSelect}
@@ -530,7 +620,7 @@ export default function GisCommandCenter({
 
           {/* Active Disaster Incidents Layer */}
           <IncidentLayer
-            incidents={filteredIncidents}
+            incidents={isCitizen ? citizenIncidents : filteredIncidents}
             visible={layerVisibility.incidents}
             selectedIncidentId={selectedFeature && selectedFeature.id}
             onSelectIncident={handleSelect}
@@ -559,6 +649,11 @@ export default function GisCommandCenter({
           <FloodSimLayer active={floodActive} level={floodLevel} />
         </MapView>
 
+        {/* Authority-only chrome: flood timeline, telemetry rail, control
+            matrix, command dock and add-point banner. Citizen mode renders
+            none of these — only the simple CitizenPanel below. */}
+        {!isCitizen && (
+        <>
         {/* Real-time flood simulation timeline (Assam / Brahmaputra) */}
         <FloodSimControl
           active={floodActive}
@@ -633,6 +728,13 @@ export default function GisCommandCenter({
             CLICK ANYWHERE ON THE MAP TO DROP A POINT
           </div>
         ) : null}
+        </>
+        )}
+
+        {/* Citizen action panel — the entire citizen-mode chrome */}
+        {isCitizen && (
+          <CitizenPanel focus={citizenFocus} onFocusLocation={handleCitizenFocusLocation} />
+        )}
       </main>
     </div>
   );
