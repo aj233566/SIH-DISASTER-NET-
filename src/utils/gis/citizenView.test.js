@@ -72,3 +72,16 @@ test('degrades safely with empty inputs (no throw, null selections)', () => {
   assert.equal(f.nearestShelter, null);
   assert.equal(f.nearestHospital, null);
 });
+
+test('a reference point (the citizen location) overrides danger for nearest facilities', () => {
+  // Reference sits right next to H1 (STNM Gangtok). From the danger point the
+  // nearest hospital was H2; from this reference it must flip to H1 — proving
+  // the reference, not the danger point, is what nearest is measured from.
+  const ref = { lat: 27.325, lng: 88.607 };
+  const fromDanger = selectCitizenFocus({ incidents, riskZones, shelters, hospitals, routes });
+  assert.equal(fromDanger.nearestHospital.id, 'H2');
+  const fromRef = selectCitizenFocus({ incidents, riskZones, shelters, hospitals, routes, reference: ref });
+  assert.equal(fromRef.nearestHospital.id, 'H1');
+  // danger point itself is still the critical incident (unchanged by reference)
+  assert.equal(fromRef.dangerPoint.lat, 27.25);
+});

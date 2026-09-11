@@ -23,6 +23,7 @@ import GibsFireLayer from './layers/GibsFireLayer';
 import BhuvanHazardLayer from './layers/BhuvanHazardLayer';
 import SachetAlertTicker from './SachetAlertTicker';
 import CitizenPanel from './CitizenPanel';
+import MyLocationMarker from './MyLocationMarker';
 import { fetchIndiaEarthquakes } from '../../services/gis/liveFeeds';
 import { formatLatLon } from '../../utils/gis/formatCoords';
 import { selectCitizenFocus } from '../../utils/gis/citizenView';
@@ -95,6 +96,8 @@ export default function GisCommandCenter({
   const [hudMode, setHudMode] = useState(initialHudMode);
   const [mapStyle, setMapStyle] = useState(initialMapStyle);
   const [mapInstance, setMapInstance] = useState(null);
+  // Citizen "Locate me" — the citizen's own GPS position, once granted.
+  const [userLocation, setUserLocation] = useState(null);
   const [floodActive, setFloodActive] = useState(false);
   const [floodLevel, setFloodLevel] = useState(0);
   const [routes, setRoutes] = useState(DEMO_ROUTES);
@@ -374,6 +377,48 @@ export default function GisCommandCenter({
     }
   }, [mapInstance]);
 
+  // Citizen "Locate me" — browser geolocation → drop a you-are-here pin, fly to
+  // it, and recompute nearest shelter/hospital from the citizen's real position.
+  const handleLocateMe = useCallback(() => new Promise((resolve) => {
+    if (!('geolocation' in navigator)) { resolve({ ok: false, reason: 'unsupported' }); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setUserLocation(loc);
+        if (mapInstance) mapInstance.setView([loc.lat, loc.lng], 13, { animate: true });
+        resolve({ ok: true, loc });
+      },
+      (err) => resolve({ ok: false, reason: err.message || 'denied' }),
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  }), [mapInstance]);
+
+  // Citizen "Report an incident" — best-effort POST to the incident API (present
+  // in the integrated app; absent in this standalone preview, where it degrades
+  // to a local confirmation). Always resolves with a friendly status.
+  const handleCitizenReport = useCallback(async (payload) => {
+    const body = {
+      type: payload.type,
+      severity: 'high',
+      description: payload.description,
+      location: userLocation
+        ? { latitude: userLocation.lat, longitude: userLocation.lng, address: 'Citizen-reported location' }
+        : { latitude: 27.33, longitude: 88.61, address: 'Sikkim (approx.)' },
+      reportedBy: 'citizen'
+    };
+    try {
+      const res = await fetch('/api/incidents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (res.ok) return { ok: true, synced: true };
+      return { ok: true, synced: false };
+    } catch {
+      return { ok: true, synced: false };
+    }
+  }, [userLocation]);
+
   // Memoized Filtered Incidents to prevent recreating arrays on every render
   const filteredIncidents = useMemo(() => {
     return incidents.filter((inc) => {
@@ -399,15 +444,18 @@ export default function GisCommandCenter({
     [activeMapState.riskZones]
   );
   // Nearest-to-danger selection powering the CitizenPanel (see citizenView.js).
+  // When the citizen has shared their location, nearest facilities are measured
+  // from THERE instead of from the danger point.
   const citizenFocus = useMemo(
     () => selectCitizenFocus({
       incidents: filteredIncidents,
       riskZones: activeMapState.riskZones,
       shelters: activeMapState.shelters,
       hospitals: activeMapState.hospitals,
-      routes
+      routes,
+      reference: userLocation
     }),
-    [filteredIncidents, activeMapState, routes]
+    [filteredIncidents, activeMapState, routes, userLocation]
   );
   // Citizen sees only the single recommended safe route, not every corridor.
   const citizenRoutes = useMemo(
@@ -463,80 +511,10 @@ export default function GisCommandCenter({
     if (onSelectFeature) onSelectFeature(feature);
   }, [onSelectFeature]);
 
-  return (
-    <div className={`gis-app-wrapper gis-role-${role} d-flex flex-column vh-100`}>
-      {/* Citizen simplified header — brand + one clear danger pill, no jargon */}
-      {isCitizen ? (
-        <header className="gis-header gis-header-citizen d-flex align-items-center justify-content-between gap-2 px-3">
-          <div className="d-flex align-items-center gap-2">
-            <span className="gis-brand-name">CASCADE-NET</span>
-            <span className="gis-cz-header-sub">Live Safety Map</span>
-          </div>
-          <span className={`gis-cz-header-pill gis-cz-status-${
-            String(citizenFocus.dangerLevel).toUpperCase() === 'CRITICAL' ? 'danger' :
-            String(citizenFocus.dangerLevel).toUpperCase() === 'HIGH' ? 'high' :
-            String(citizenFocus.dangerLevel).toUpperCase() === 'LOW' ? 'safe' : 'warning'
-          }`}>
-            {String(citizenFocus.dangerLevel).toUpperCase() === 'LOW'
-              ? 'NO ACTIVE ALERT'
-              : `DANGER · ${String(citizenFocus.dangerLevel).toUpperCase()}`}
-          </span>
-        </header>
-      ) : null}
-
-      {/* 1. Institutional Top Operational Header */}
-      {!isCitizen && (
-      <header className="gis-header d-flex align-items-center justify-content-between gap-2 px-2 px-md-3">
-        <div className="gis-header-left d-flex align-items-center gap-2">
-          <span className="gis-eoc-tag">EOC-GIS</span>
-          <div className="gis-header-title d-flex align-items-center gap-2">
-            <span className="gis-brand-name">CASCADE-NET</span>
-            <span className="d-none d-sm-inline" style={{ color: 'var(--text-muted)' }}>/</span>
-            <span className="d-none d-sm-inline" style={{ color: 'var(--text-secondary)' }}>SIKKIM THEATER</span>
-          </div>
-        </div>
-
-        {/* Tactical Status Pill */}
-        <div className="gis-header-ticker d-flex align-items-center gap-2 d-none d-md-flex">
-          <span className="gis-ticker-dot live-pulse" />
-          <span className="gis-ticker-text">
-            {simScenario === 'BASELINE' ? 'NH-10 Km 32 BLOCKED • SIKKIM EOC DEPLOYED' :
-             simScenario === 'TRAFFIC_SPIKE' ? 'EVACUATION CONVOY SURGE • NH-10 DELAY +42m' :
-             'NH-10 RESTORED • BRO CLEARANCE COMPLETE'}
-          </span>
-        </div>
-
-        <div className="gis-header-meta d-flex align-items-center gap-2">
-          <span className="gis-header-meta-extra gis-coord-readout d-none d-lg-inline">
-            CTR{' '}
-            {centerMapsHref ? (
-              <a
-                className="gis-coord-link"
-                href={centerMapsHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Open view center in Google Maps (WGS-84)"
-              >
-                {centerReadout}
-              </a>
-            ) : centerReadout}
-            {viewInfo ? <span className="gis-coord-zoom"> · Z{viewInfo.zoom.toFixed(1)}</span> : null}
-          </span>
-          <span className="gis-header-meta-extra d-none d-lg-inline">•</span>
-          <span className="gis-header-meta-extra d-none d-lg-inline">DATUM WGS-84</span>
-          <span className="gis-header-meta-extra d-none d-lg-inline">•</span>
-          <span className={isLiveApiData ? 'gis-meta-live' : 'gis-meta-sim'}>
-            {isLiveApiData ? 'LIVE API' : 'SIMULATED DATA'}
-          </span>
-          <span className="gis-header-meta-extra d-none d-sm-inline">•</span>
-          <span className="d-none d-sm-inline" style={{ color: 'var(--color-info)' }}>{hudMode.toUpperCase()}</span>
-        </div>
-      </header>
-      )}
-
-      {/* 2. Map Operating Canvas */}
-      <main className={`gis-workspace flex-grow-1 position-relative gis-style-${mapStyle} ${addPointMode ? 'gis-add-mode' : ''}`}>
-        <MapView className="gis-dark-tiles" basemap={mapStyle} onMapReady={setMapInstance}>
+  // The shared map engine — one Leaflet map + all reusable layer components.
+  // Rendered into whichever role layout wins below; never duplicated.
+  const mapElement = (
+    <MapView className="gis-dark-tiles" basemap={mapStyle} onMapReady={setMapInstance}>
           {/* Spatial Reset Controller */}
           <MapResetController resetTrigger={resetTrigger} isSimActive={simScenario !== 'BASELINE'} />
 
@@ -647,11 +625,115 @@ export default function GisCommandCenter({
 
           {/* Real-time flood simulation (Assam / Brahmaputra) */}
           <FloodSimLayer active={floodActive} level={floodLevel} />
-        </MapView>
 
-        {/* Authority-only chrome: flood timeline, telemetry rail, control
-            matrix, command dock and add-point banner. Citizen mode renders
-            none of these — only the simple CitizenPanel below. */}
+          {/* Citizen "you are here" pin (after Locate me) */}
+          {isCitizen ? <MyLocationMarker location={userLocation} /> : null}
+    </MapView>
+  );
+
+  // ============================================================
+  // CITIZEN — desktop-first, Bootstrap-grid responsive page.
+  // Real Bootstrap layout: container-fluid > row > map column + info column.
+  // Desktop (lg+): map dominant beside a docked info column.
+  // Tablet/phone (<lg): the same columns stack (map on top, actions below).
+  // Custom CSS only handles colour/type/heights, never the layout itself.
+  // ============================================================
+  if (isCitizen) {
+    return (
+      <div className="gis-app-wrapper gis-role-citizen d-flex flex-column vh-100">
+        <header className="gis-header gis-header-citizen d-flex align-items-center justify-content-between gap-3 px-3">
+          <div className="d-flex align-items-center gap-2">
+            <span className="gis-brand-name">CASCADE-NET</span>
+            <span className="gis-cz-header-sub d-none d-sm-inline">Live Safety Map</span>
+          </div>
+          <span className={`gis-cz-header-pill gis-cz-status-${
+            String(citizenFocus.dangerLevel).toUpperCase() === 'CRITICAL' ? 'danger' :
+            String(citizenFocus.dangerLevel).toUpperCase() === 'HIGH' ? 'high' :
+            String(citizenFocus.dangerLevel).toUpperCase() === 'LOW' ? 'safe' : 'warning'
+          }`}>
+            {String(citizenFocus.dangerLevel).toUpperCase() === 'LOW'
+              ? 'NO ACTIVE ALERT'
+              : `DANGER · ${String(citizenFocus.dangerLevel).toUpperCase()}`}
+          </span>
+        </header>
+
+        <main className="gis-citizen-main flex-grow-1">
+          <div className="container-fluid h-100 p-0">
+            <div className="row g-0 h-100 gis-citizen-row">
+              <div className="col-12 col-lg-7 col-xl-8 gis-citizen-mapcol position-relative">
+                {mapElement}
+              </div>
+              <aside className="col-12 col-lg-5 col-xl-4 gis-citizen-sidecol">
+                <CitizenPanel
+                  focus={citizenFocus}
+                  onFocusLocation={handleCitizenFocusLocation}
+                  onLocateMe={handleLocateMe}
+                  onReport={handleCitizenReport}
+                  located={!!userLocation}
+                />
+              </aside>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // ============================================================
+  // AUTHORITY — full tactical command center (map full-bleed + overlays).
+  // ============================================================
+  return (
+    <div className="gis-app-wrapper gis-role-authority d-flex flex-column vh-100">
+      <header className="gis-header d-flex align-items-center justify-content-between gap-2 px-2 px-md-3">
+        <div className="gis-header-left d-flex align-items-center gap-2">
+          <span className="gis-eoc-tag">EOC-GIS</span>
+          <div className="gis-header-title d-flex align-items-center gap-2">
+            <span className="gis-brand-name">CASCADE-NET</span>
+            <span className="d-none d-sm-inline" style={{ color: 'var(--text-muted)' }}>/</span>
+            <span className="d-none d-sm-inline" style={{ color: 'var(--text-secondary)' }}>SIKKIM THEATER</span>
+          </div>
+        </div>
+
+        <div className="gis-header-ticker d-flex align-items-center gap-2 d-none d-md-flex">
+          <span className="gis-ticker-dot live-pulse" />
+          <span className="gis-ticker-text">
+            {simScenario === 'BASELINE' ? 'NH-10 Km 32 BLOCKED • SIKKIM EOC DEPLOYED' :
+             simScenario === 'TRAFFIC_SPIKE' ? 'EVACUATION CONVOY SURGE • NH-10 DELAY +42m' :
+             'NH-10 RESTORED • BRO CLEARANCE COMPLETE'}
+          </span>
+        </div>
+
+        <div className="gis-header-meta d-flex align-items-center gap-2">
+          <span className="gis-header-meta-extra gis-coord-readout d-none d-lg-inline">
+            CTR{' '}
+            {centerMapsHref ? (
+              <a
+                className="gis-coord-link"
+                href={centerMapsHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Open view center in Google Maps (WGS-84)"
+              >
+                {centerReadout}
+              </a>
+            ) : centerReadout}
+            {viewInfo ? <span className="gis-coord-zoom"> · Z{viewInfo.zoom.toFixed(1)}</span> : null}
+          </span>
+          <span className="gis-header-meta-extra d-none d-lg-inline">•</span>
+          <span className="gis-header-meta-extra d-none d-lg-inline">DATUM WGS-84</span>
+          <span className="gis-header-meta-extra d-none d-lg-inline">•</span>
+          <span className={isLiveApiData ? 'gis-meta-live' : 'gis-meta-sim'}>
+            {isLiveApiData ? 'LIVE API' : 'SIMULATED DATA'}
+          </span>
+          <span className="gis-header-meta-extra d-none d-sm-inline">•</span>
+          <span className="d-none d-sm-inline" style={{ color: 'var(--color-info)' }}>{hudMode.toUpperCase()}</span>
+        </div>
+      </header>
+
+      <main className={`gis-workspace flex-grow-1 position-relative gis-style-${mapStyle} ${addPointMode ? 'gis-add-mode' : ''}`}>
+        {mapElement}
+
+        {/* Authority operational chrome */}
         {!isCitizen && (
         <>
         {/* Real-time flood simulation timeline (Assam / Brahmaputra) */}

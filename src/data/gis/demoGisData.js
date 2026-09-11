@@ -52,6 +52,12 @@ export const DEMO_META = {
  * 1. Geo-Tagged Field Incidents & Citizen Reports
  * Represents verified ground-truth landslides, rockfalls, and mudflow hazards.
  */
+// DEMO / SYNTHETIC DATA — six SIMULTANEOUS, geographically distinct disaster
+// zones spanning the six hazard types the platform recognises. `affectedRadiusM`
+// gives each incident a real affected-area footprint (rendered as a zone), and
+// the six sites are spread across the Teesta/Sikkim corridor (SW flood → central
+// landslide/crack → NE road → N slope movement → S infrastructure) so they read
+// as distinct regions, not one stacked hotspot. Not from a backend.
 export const DEMO_INCIDENTS = [
   {
     id: "INC-LS-101",
@@ -65,6 +71,7 @@ export const DEMO_INCIDENTS = [
     },
     status: "Active",
     impactScore: 96,
+    affectedRadiusM: 850,
     reportedAt: "2026-08-31T17:10:00Z",
     affectedPopulation: 3800,
     requiredAssets: ["Heavy Earthmovers", "BRO Dozer Crew", "NDRF SAR"],
@@ -73,61 +80,104 @@ export const DEMO_INCIDENTS = [
     verificationStatus: "Verified"
   },
   {
-    id: "INC-LS-102",
-    title: "Slope Fissures & Slump Threat — Singtam Ridge",
-    type: "Ground Fissure",
+    id: "INC-FF-201",
+    title: "Teesta Flash-Flood Surge — Melli Riverfront",
+    type: "Flash Flood",
+    severity: "Critical",
+    location: {
+      lat: 27.1850,
+      lng: 88.4700,
+      address: "Teesta Riverbank, Melli Bazaar"
+    },
+    status: "Active",
+    impactScore: 91,
+    affectedRadiusM: 1250,
+    reportedAt: "2026-08-31T18:05:00Z",
+    affectedPopulation: 2600,
+    requiredAssets: ["NDRF Water Rescue", "Inflatable Boats"],
+    description: "Sudden Teesta discharge spike inundating the riverfront market and low-lying wards. Rapid evacuation underway.",
+    source: "CWC River Gauge + SDRF",
+    verificationStatus: "Verified"
+  },
+  {
+    id: "INC-RB-301",
+    title: "NH-10 Corridor Blocked — Ranipool Debris Choke",
+    type: "Road Blockage",
     severity: "High",
+    location: {
+      lat: 27.3100,
+      lng: 88.6200,
+      address: "NH-10 Ranipool–Gangtok Approach"
+    },
+    status: "Active",
+    impactScore: 78,
+    affectedRadiusM: 600,
+    reportedAt: "2026-08-31T17:50:00Z",
+    affectedPopulation: 1400,
+    requiredAssets: ["JCB Ditching Unit", "Traffic Police Convoy"],
+    description: "Fallen boulders and slurry choke both lanes of NH-10; convoy movement to Gangtok halted.",
+    source: "Traffic Police Control Room",
+    verificationStatus: "Verified"
+  },
+  {
+    id: "INC-SC-401",
+    title: "Tension Cracks Widening — Singtam Ridge",
+    type: "Slope Crack",
+    severity: "Warning",
     location: {
       lat: 27.2410,
       lng: 88.5100,
       address: "Upper Singtam Terrace Slopes, Above Ward 3"
     },
     status: "Active",
-    impactScore: 82,
+    impactScore: 58,
+    affectedRadiusM: 520,
     reportedAt: "2026-08-31T17:25:00Z",
-    affectedPopulation: 1640,
-    requiredAssets: ["Geotechnical Inclinometers", "SDRF Evacuation Squad"],
-    description: "15cm wide ground tension cracks observed across tea garden hillside. High probability of secondary debris slide.",
-    source: "Citizen Report #92 (Gram Panchayat Verified)",
+    affectedPopulation: 900,
+    requiredAssets: ["Geotechnical Inclinometers", "SDRF Watch Team"],
+    description: "15cm tension cracks propagating across the tea-garden hillside; monitored for progressive failure.",
+    source: "Gram Panchayat (Verified)",
     verificationStatus: "Verified"
   },
   {
-    id: "INC-LS-103",
-    title: "Culvert Silt Inundation & Debris Flow",
-    type: "Mudflow",
-    severity: "Warning",
+    id: "INC-SM-501",
+    title: "Active Slope Movement — Dikchu Ridge",
+    type: "Slope Movement",
+    severity: "High",
     location: {
-      lat: 27.3450,
-      lng: 88.5900,
-      address: "Ranipool-Gangtok Lower Approach Road"
+      lat: 27.3650,
+      lng: 88.5450,
+      address: "Dikchu Ridge, North Sector"
     },
     status: "Active",
-    impactScore: 61,
-    reportedAt: "2026-08-31T17:40:00Z",
-    affectedPopulation: 900,
-    requiredAssets: ["JCB Ditching Unit", "Traffic Police Convoy"],
-    description: "Torrential mud and loose gravel overflowing mountain drainage. Single-lane restricted transit in place.",
-    source: "SDRF Highway Patroller",
+    impactScore: 74,
+    affectedRadiusM: 720,
+    reportedAt: "2026-08-31T18:15:00Z",
+    affectedPopulation: 1100,
+    requiredAssets: ["Inclinometer Array", "SDRF Evacuation Squad"],
+    description: "Inclinometers register 6 cm/day downslope creep; slow-moving slump threatening the ridge hamlet.",
+    source: "GSI Slope Telemetry",
     verificationStatus: "Verified"
   },
   {
-    id: "INC-LS-104",
-    title: "Downed High-Voltage Mountain Power Cables",
-    type: "Infrastructure",
+    id: "INC-ID-601",
+    title: "Power & Footbridge Infrastructure Damage — Rangpo",
+    type: "Infrastructure Damage",
     severity: "Operational",
     location: {
       lat: 27.2050,
       lng: 88.5200,
-      address: "Rangpo Power Feeder Line Sector 2"
+      address: "Rangpo Feeder Line & Footbridge, Sector 2"
     },
-    status: "Resolved",
-    impactScore: 35,
-    reportedAt: "2026-08-31T16:15:00Z",
-    affectedPopulation: 450,
-    requiredAssets: ["State Power Clearance Squad"],
-    description: "Tree fall cleared from 33kV transmission corridor. Substation power restored.",
-    source: "Power Grid Telemetry",
-    verificationStatus: "Resolved"
+    status: "Active",
+    impactScore: 46,
+    affectedRadiusM: 460,
+    reportedAt: "2026-08-31T16:40:00Z",
+    affectedPopulation: 700,
+    requiredAssets: ["State Power Squad", "PWD Bridge Unit"],
+    description: "33kV feeder line down and pedestrian footbridge decking cracked; utility crews mobilising.",
+    source: "Power Grid Telemetry + PWD",
+    verificationStatus: "Verified"
   }
 ];
 

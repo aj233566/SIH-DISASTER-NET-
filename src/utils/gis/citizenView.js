@@ -84,7 +84,8 @@ export function selectCitizenFocus({
   riskZones = [],
   shelters = [],
   hospitals = [],
-  routes = []
+  routes = [],
+  reference = null
 } = {}) {
   // 1. Danger point — top active incident by severity, then affected population.
   const activeIncidents = (incidents || []).filter(isActive);
@@ -123,11 +124,14 @@ export function selectCitizenFocus({
     }
   }
 
-  // 2. Nearest operational shelter + hospital to the danger point.
+  // 2. Nearest operational shelter + hospital. Measured from the citizen's own
+  //    location when provided (the "Locate me" action), otherwise from the
+  //    danger point (the default nearest-to-danger rule).
   const openShelters = (shelters || []).filter((s) => String(s.status || 'Operational').toLowerCase() !== 'closed');
   const openHospitals = (hospitals || []).filter((h) => String(h.status || 'Operational').toLowerCase() !== 'closed');
-  const nearestShelter = nearestTo(dangerPoint, openShelters);
-  const nearestHospital = nearestTo(dangerPoint, openHospitals);
+  const measureFrom = (reference && typeof reference.lat === 'number') ? reference : dangerPoint;
+  const nearestShelter = nearestTo(measureFrom, openShelters);
+  const nearestHospital = nearestTo(measureFrom, openHospitals);
 
   // 3. Primary safe route — a Recommended route, else the first non-blocked one.
   const primaryRoute =

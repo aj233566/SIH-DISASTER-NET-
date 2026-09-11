@@ -26,24 +26,32 @@ export default function TilePrefetcher({ urlTemplate, subdomains = 'abc', maxNat
 
   const capZoom = (z) => (typeof maxNativeZoom === 'number' ? Math.min(z, maxNativeZoom) : z);
 
+  // Skip prefetching entirely on constrained connections (Data Saver on, or a
+  // 2g/3g link). Pre-warming off-screen tiles only helps when there's spare
+  // bandwidth; on a slow phone link it steals bandwidth from the tiles the user
+  // is actually looking at and makes the visible map load SLOWER. Detected via
+  // the Network Information API where available.
+  const conn = typeof navigator !== 'undefined' ? (navigator.connection || navigator.mozConnection || navigator.webkitConnection) : null;
+  const dataSaver = !!(conn && (conn.saveData || /(^|-)(slow-2g|2g|3g)$/.test(conn.effectiveType || '')));
+
   // (1) Seed the low-zoom national overview once per basemap — but only AFTER
   // a delay so it never competes with the initial map view loading (that was
-  // part of the "slow first load"). Small + gentle.
+  // part of the "slow first load"). Small + gentle, and skipped on slow links.
   useEffect(() => {
-    if (!urlTemplate) return;
+    if (!urlTemplate || dataSaver) return;
     const ctrl = new AbortController();
     const t = setTimeout(() => {
       runWhenIdle(() => {
         warmBounds(urlTemplate, subdomains, INDIA_BOUNDS, 3, capZoom(5), {
           concurrency: 2,
-          maxTiles: 80,
+          maxTiles: 30,
           signal: ctrl.signal
         });
       });
-    }, 4000);
+    }, 6000);
     return () => { clearTimeout(t); ctrl.abort(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlTemplate, subdomains]);
+  }, [urlTemplate, subdomains, dataSaver]);
 
   // (2) Predictive prefetch around the viewport after each move settles.
   const prefetchAroundView = () => {
@@ -53,8 +61,8 @@ export default function TilePrefetcher({ urlTemplate, subdomains = 'abc', maxNat
     // with hundreds of parallel requests that compete with the tiles you're
     // actually looking at — which is what made panning feel slow/laggy. Small +
     // low-concurrency keeps the visible map fast while still smoothing short pans.
-    const padW = (b.getEast() - b.getWest()) * 0.35;
-    const padH = (b.getNorth() - b.getSouth()) * 0.35;
+    const padW = (b.getEast() - b.getWest()) * 0.18;
+    const padH = (b.getNorth() - b.getSouth()) * 0.18;
     const padded = {
       west: b.getWest() - padW,
       east: b.getEast() + padW,
@@ -62,17 +70,17 @@ export default function TilePrefetcher({ urlTemplate, subdomains = 'abc', maxNat
       north: b.getNorth() + padH
     };
     const ctrl = new AbortController();
-    // Just the immediate next-pan ring at the current zoom, gently.
+    // Just a thin immediate-next-pan ring at the current zoom, gently.
     warmBounds(urlTemplate, subdomains, padded, z, z, {
       concurrency: 2,
-      maxTiles: 90,
+      maxTiles: 36,
       signal: ctrl.signal
     });
   };
 
   useMapEvents({
     moveend() {
-      if (!urlTemplate) return;
+      if (!urlTemplate || dataSaver) return;
       clearTimeout(moveTimer.current);
       // Wait for the pan to fully settle before warming, so prefetch never
       // competes with the tiles loading for the view you just moved to.

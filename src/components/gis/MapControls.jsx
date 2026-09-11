@@ -29,27 +29,50 @@ function MapControls({
 }) {
   const isMobileInitial = typeof window !== 'undefined' ? (window.innerWidth < 768 || window.innerHeight < 480) : false;
   const [isCollapsed, setIsCollapsed] = useState(hudMode === 'minimal' || isMobileInitial);
+  // Secondary/live overlays stay tucked away by default so the rail shows a
+  // short, scannable core set instead of a 14-row control wall.
+  const [showMore, setShowMore] = useState(false);
 
   useEffect(() => {
     if (hudMode === 'minimal') setIsCollapsed(true);
   }, [hudMode]);
 
-  const layerItems = [
+  // Core operational layers — always visible.
+  const primaryLayers = [
     { key: 'incidents', label: 'INC', title: 'Emergency Incidents' },
-    { key: 'villages', label: 'VILL', title: 'Mountain Settlements' },
-    { key: 'hospitals', label: 'HOSP', title: 'Medical Facilities' },
-    { key: 'shelters', label: 'SHEL', title: 'Relief Shelters' },
-    { key: 'resources', label: 'ASSET', title: 'BRO Earthmovers & SAR' },
-    { key: 'roads', label: 'ROAD', title: 'Road Network' },
     { key: 'riskZones', label: 'RISK', title: 'Landslide Risk Zones' },
-    { key: 'heatmap', label: 'HEAT', title: 'Risk Heatmap' },
     { key: 'routes', label: 'ROUTE', title: 'Evacuation Routes' },
+    { key: 'roads', label: 'ROAD', title: 'Road Network' },
+    { key: 'hospitals', label: 'HOSP', title: 'Medical Facilities' },
+    { key: 'shelters', label: 'SHEL', title: 'Relief Shelters' }
+  ];
+  // Secondary + live overlays — revealed via "MORE LAYERS".
+  const moreLayers = [
+    { key: 'villages', label: 'VILL', title: 'Mountain Settlements' },
+    { key: 'resources', label: 'ASSET', title: 'BRO Earthmovers & SAR' },
+    { key: 'heatmap', label: 'HEAT', title: 'Risk Heatmap' },
     { key: 'quakes', label: 'QUAKE', title: 'LIVE USGS Earthquakes (last 24h)' },
     { key: 'liveMed', label: 'MED+', title: 'LIVE hospitals & clinics for this view (OpenStreetMap) — zoom in to load' },
     { key: 'fires', label: 'FIRE', title: 'LIVE active fires / thermal anomalies (NASA GIBS · VIIRS 375m)' },
     { key: 'bhuvan', label: 'ISRO', title: 'ISRO Bhuvan authoritative WMS overlay' },
     { key: 'ofm', label: 'HD MAP', title: 'OpenFreeMap detailed vector map (free, streamed, no download)' }
   ];
+  const renderLayerButton = (item) => {
+    const isActive = layerVisibility[item.key] !== false;
+    return (
+      <div className="col" key={item.key}>
+        <button
+          className={`gis-btn-compact d-flex align-items-center gap-1 w-100 ${isActive ? 'active' : ''}`}
+          onClick={() => onToggleLayer(item.key)}
+          title={item.title}
+        >
+          <span className="gis-indicator-dot" />
+          <span>{item.label}</span>
+        </button>
+      </div>
+    );
+  };
+  const activeMoreCount = moreLayers.filter((l) => layerVisibility[l.key] === true).length;
 
   const mapStyles = [
     { key: 'map', label: 'MAP' },
@@ -85,26 +108,31 @@ function MapControls({
 
       {!isCollapsed && (
         <div className="gis-panel-body d-flex flex-column gap-3">
-          {/* Section 1: Layer Matrix — real Bootstrap 2-column grid */}
+          {/* Section 1: Layer Matrix — core layers, then collapsible extras */}
           <div className="gis-controls-section d-flex flex-column gap-1">
             <span className="gis-section-subtitle">LAYERS</span>
             <div className="row row-cols-2 g-1">
-              {layerItems.map((item) => {
-                const isActive = layerVisibility[item.key] !== false;
-                return (
-                  <div className="col" key={item.key}>
-                    <button
-                      className={`gis-btn-compact d-flex align-items-center gap-1 w-100 ${isActive ? 'active' : ''}`}
-                      onClick={() => onToggleLayer(item.key)}
-                      title={item.title}
-                    >
-                      <span className="gis-indicator-dot" />
-                      <span>{item.label}</span>
-                    </button>
-                  </div>
-                );
-              })}
+              {primaryLayers.map(renderLayerButton)}
             </div>
+
+            <button
+              type="button"
+              className={`gis-btn-more w-100 ${showMore ? 'open' : ''}`}
+              onClick={() => setShowMore((v) => !v)}
+              aria-expanded={showMore}
+              title="Show secondary and live overlays"
+            >
+              <span>{showMore ? '▾ MORE LAYERS' : '▸ MORE LAYERS'}</span>
+              {!showMore && activeMoreCount > 0 ? (
+                <span className="gis-more-badge">{activeMoreCount} on</span>
+              ) : null}
+            </button>
+
+            {showMore && (
+              <div className="row row-cols-2 g-1">
+                {moreLayers.map(renderLayerButton)}
+              </div>
+            )}
           </div>
 
           {/* Section 2: Severity Filter — real Bootstrap 3-column grid */}

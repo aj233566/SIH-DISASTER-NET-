@@ -2364,24 +2364,38 @@ body {
 .gis-cz-status-warning, .gis-cz-header-pill.gis-cz-status-warning { background: var(--color-warning); }
 .gis-cz-status-safe,    .gis-cz-header-pill.gis-cz-status-safe    { background: var(--color-operational); }
 
-/* --- Citizen action panel --------------------------------------------- */
-.gis-citizen-panel {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 360px;
-  max-width: calc(100% - 32px);
-  max-height: calc(100% - 32px);
+/* --- Citizen GRID LAYOUT (Bootstrap columns do the layout; CSS = size + colour)
+   Desktop-first: a dominant map column beside a docked info column. Bootstrap's
+   col-12 / col-lg-* handle the stacking across breakpoints; these rules only
+   size the map, give the info column the CASCADE-NET identity, and set the
+   heights Bootstrap can't. */
+.gis-citizen-main { overflow: hidden; }
+.gis-citizen-row { min-height: 0; }
+.gis-citizen-mapcol { min-height: 0; }
+/* The shared map fills its column (relative — NOT the authority full-bleed
+   absolute inset). !important beats the desktop-shell .gis-map-container inset. */
+.gis-role-citizen .gis-map-container {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+/* Info column — docked, scrollable, CASCADE-NET dark identity. */
+.gis-citizen-sidecol {
+  background: var(--bg-sidebar);
+  border-left: 1px solid var(--border-subtle);
+  max-height: 100%;
   overflow-y: auto;
-  z-index: 1200;
+}
+/* The action panel is normal in-flow content inside the info column. */
+.gis-citizen-panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 14px;
-  background: rgba(14, 20, 25, 0.94);
-  border: 1px solid var(--border-subtle);
-  border-radius: 14px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  gap: 14px;
+  padding: 16px;
 }
 
 /* Danger status block — the loudest element */
@@ -2466,34 +2480,240 @@ body {
 }
 .gis-cz-foot strong { color: var(--color-operational); }
 
-/* Citizen panel becomes a bottom sheet on narrow/short screens */
-@media (max-width: 768px) {
-  .gis-citizen-panel {
-    top: auto;
-    left: 8px;
-    right: 8px;
-    bottom: 8px;
-    width: auto;
-    max-width: none;
-    max-height: 56%;
-    border-radius: 16px 16px 12px 12px;
-  }
-  .gis-cz-status-level { font-size: var(--fs-md); }
-}
-@media (max-width: 400px) {
-  .gis-role-switch button { padding: 6px 12px; }
-  .gis-citizen-panel { padding: 10px; gap: 10px; }
+/* --- Citizen features: actions, report, helplines, tips ---------------- */
+.gis-cz-section-label {
+  display: block;
+  font-family: var(--font-mono, monospace);
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
 }
 
-/* Citizen mode has no docked left rail, right control matrix or bottom
-   status strip, so the desktop shell's map inset (which reserves 206px /
-   196px / 42px for those in authority mode) must be cancelled — otherwise
-   the map leaves a blank gutter where the rails would have been. Higher
-   specificity + !important beats the authority `.gis-map-container` inset. */
-@media (min-width: 992px) {
-  .gis-role-citizen .gis-map-container {
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-  }
+/* Big emergency action buttons (2-col Bootstrap grid) */
+.gis-cz-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 58px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-family: var(--font-mono, monospace);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, transform 0.05s ease;
 }
+.gis-cz-action:hover:not(:disabled) { background: var(--bg-elevated); border-color: var(--border-accent); }
+.gis-cz-action:active:not(:disabled) { transform: translateY(1px); }
+.gis-cz-action:disabled { opacity: 0.6; cursor: progress; }
+.gis-cz-action.active { border-color: var(--accent); color: var(--accent-strong); }
+.gis-cz-action-ico { font-size: 20px; line-height: 1; }
+/* SOS is the loudest control */
+.gis-cz-action-sos {
+  background: var(--color-critical);
+  border-color: var(--color-critical);
+  color: #fff;
+}
+.gis-cz-action-sos:hover { background: #ff6b6f; border-color: #ff6b6f; }
+.gis-cz-action-safe.active { background: var(--color-operational); border-color: var(--color-operational); color: #04120a; }
+
+.gis-cz-note { margin: 8px 0 0; font-size: var(--fs-xs); color: var(--text-muted); line-height: 1.35; }
+.gis-cz-note.gis-cz-ok { color: var(--color-operational); }
+
+/* Report form */
+.gis-cz-report {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--bg-card);
+}
+.gis-cz-input {
+  width: 100%;
+  padding: 9px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-size: var(--fs-sm);
+  font-family: inherit;
+  resize: vertical;
+}
+.gis-cz-input:focus { outline: none; border-color: var(--accent); }
+.gis-cz-report-submit {
+  flex: 0 0 auto;
+  padding: 9px 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #04191d;
+  font-weight: 800;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.gis-cz-report-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* One-tap directions link under shelter/hospital */
+.gis-cz-card-wrap { display: flex; flex-direction: column; }
+.gis-cz-dir {
+  align-self: flex-end;
+  margin-top: 3px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--accent-strong);
+  text-decoration: none;
+}
+.gis-cz-dir:hover { text-decoration: underline; }
+
+/* Emergency helplines — tap to dial */
+.gis-cz-help {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  text-decoration: none;
+}
+.gis-cz-help:hover { background: var(--bg-elevated); color: var(--text-primary); }
+.gis-cz-help strong { color: var(--color-operational); font-family: var(--font-mono, monospace); font-size: var(--fs-base); }
+
+/* Safety tips */
+.gis-cz-tips-toggle {
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: 1px dashed var(--border-subtle);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-mono, monospace);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+.gis-cz-tips-toggle:hover { color: var(--text-primary); border-color: var(--border-accent); }
+.gis-cz-tips {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+/* Below lg the Bootstrap columns stack: map on top (given a definite height
+   so Leaflet has a box to fill), info column below, and the page scrolls. */
+@media (max-width: 991.98px) {
+  .gis-citizen-main { overflow-y: auto; overflow-x: hidden; }
+  .gis-citizen-row { height: auto !important; }
+  .gis-citizen-mapcol { height: 56vh; }
+  .gis-citizen-sidecol { border-left: none; border-top: 1px solid var(--border-subtle); }
+}
+
+/* ==========================================================================
+   AUTHORITY DECLUTTER — targeted, no functionality removed
+   ========================================================================== */
+
+/* "MORE LAYERS" disclosure — keeps the rail short by default */
+.gis-btn-more {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  margin-top: 2px;
+  padding: 5px 8px;
+  background: transparent;
+  border: 1px dashed var(--border-subtle);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono, monospace);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+.gis-btn-more:hover { color: var(--text-primary); border-color: var(--border-accent); }
+.gis-btn-more.open { border-style: solid; color: var(--text-primary); }
+.gis-more-badge {
+  font-size: var(--fs-2xs);
+  font-weight: 800;
+  color: #04191d;
+  background: var(--accent);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
+/* Compact the tactical legend: tighter rows, so it takes less permanent
+   vertical space without dropping any symbology. */
+.gis-legend-overlay .gis-panel-body { gap: 0.6rem !important; }
+.gis-legend-overlay .gis-legend-items { gap: 2px !important; }
+.gis-legend-overlay .gis-legend-row { font-size: var(--fs-xs); line-height: 1.15; }
+.gis-legend-overlay .gis-section-label { font-size: var(--fs-2xs); letter-spacing: 0.08em; margin-bottom: 2px; }
+
+/* ==========================================================================
+   CITIZEN — responsive visual refinements (layout stays Bootstrap; these only
+   tune type/spacing/tap-target size as the columns stack down).
+   ========================================================================== */
+@media (max-width: 991.98px) {
+  .gis-header-citizen { min-height: 44px; }
+  .gis-header-citizen .gis-brand-name { font-size: var(--fs-base); }
+  .gis-cz-header-pill { font-size: var(--fs-xs); padding: 5px 11px; }
+  .gis-cz-status-level { font-size: var(--fs-md); }
+  /* Bigger thumb targets on touch/stacked widths */
+  .gis-cz-card { min-height: 60px; }
+  .gis-cz-card-ico { font-size: 28px; }
+}
+
+/* Very small phones (≤400px): keep everything readable, no clipping */
+@media (max-width: 400px) {
+  .gis-role-switch button { padding: 6px 12px; }
+  .gis-header-citizen { padding-left: 12px; padding-right: 10px; }
+  .gis-cz-card-sub { font-size: var(--fs-sm); }
+  .gis-citizen-panel { padding: 12px; gap: 10px; }
+}
+
+/* ==========================================================================
+   MULTI-DISASTER type labels — a compact pill above each incident zone naming
+   the disaster type, colour-coded by severity, so multiple distinct hazards
+   are legible at a glance on both maps.
+   ========================================================================== */
+.leaflet-tooltip.gis-disaster-type-label {
+  background: rgba(10, 14, 16, 0.92);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-left-width: 4px;
+  border-radius: 5px;
+  padding: 2px 7px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  white-space: nowrap;
+}
+.leaflet-tooltip.gis-disaster-type-label::before { display: none; } /* no callout arrow */
+.gis-disaster-type-label.sev-critical    { border-left-color: var(--color-critical); color: #ffd7d8; }
+.gis-disaster-type-label.sev-high        { border-left-color: var(--color-high); }
+.gis-disaster-type-label.sev-warning     { border-left-color: var(--color-warning); }
+.gis-disaster-type-label.sev-moderate    { border-left-color: var(--color-warning); }
+.gis-disaster-type-label.sev-operational { border-left-color: var(--color-operational); }
+.gis-disaster-type-label.sev-low         { border-left-color: var(--color-operational); }

@@ -249,7 +249,7 @@ export default function MapView({
           zoomOffset={base.zoomOffset || 0}
           maxNativeZoom={base.maxNativeZoom}
           maxZoom={base.maxZoom || 19}
-          keepBuffer={3}
+          keepBuffer={2}
           updateWhenZooming={false}
           crossOrigin={true}
           eventHandlers={{
@@ -268,7 +268,7 @@ export default function MapView({
             zoomOffset={base.zoomOffset || 0}
             maxNativeZoom={base.maxNativeZoom}
             maxZoom={base.maxZoom || 19}
-            keepBuffer={3}
+            keepBuffer={2}
             updateWhenZooming={false}
             crossOrigin={true}
           />
