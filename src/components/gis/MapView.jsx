@@ -27,10 +27,16 @@ export const BASEMAPS = {
   // tiles over parallel connections, which is the single biggest cold-load
   // speed win on a bandwidth-limited link.
   map: {
+    // Esri World Street Map. Moved OFF OpenStreetMap's public tiles: OSM's
+    // volunteer tile servers actively BLOCK apps under their usage policy
+    // (returning 403 "Access blocked"), which is exactly what made the map
+    // crawl / show blocked tiles. Esri's keyless basemaps allow app usage and
+    // are already used here for SAT/TERRAIN/DARK, so they load reliably and
+    // are not rate-limited the way OSM public tiles are. Same street-map detail.
     type: 'raster',
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    subdomains: 'abc',
-    attribution: '&copy; OpenStreetMap contributors',
+    url: 'https://services.arcgisonline.com/arcgis/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, USGS, NGA, OpenStreetMap contributors',
+    maxNativeZoom: 19,
     maxZoom: 19
   },
   // DARK = Esri Dark Gray Canvas (muted operations backdrop) + a matching
@@ -212,16 +218,16 @@ export default function MapView({
            triggering velocity, without changing how a normal drag feels. */
         inertiaMaxSpeed={1500}
         inertiaDeceleration={3400}
-        /* Smoothness tuning (see the CASCADE-NET smoothness pass):
-           - zoomSnap:0 + zoomDelta:0.5 unlock fractional zoom levels, so a
-             wheel tick or +/- glides part-way instead of jumping a whole
-             integer level (the "jumpy zoom" complaint).
-           - wheelPxPerZoomLevel:120 (up from the 60 default) makes each notch
-             of the wheel cover half as much zoom, so scrolling reads as a
-             gradual push-in rather than a lurch. */
-        zoomSnap={0.5}
-        zoomDelta={0.5}
-        wheelPxPerZoomLevel={110}
+        /* PERFORMANCE (desktop + mobile): integer zoom. Fractional zoom
+           (zoomSnap:0.5) forces Leaflet to CSS-scale every tile on each partial
+           zoom step — the single biggest pan/zoom lag on both desktop and
+           mobile. Whole-level zoom snaps cleanly and needs no per-tile scaling.
+           Default wheel sensitivity so a notch zooms a full level rather than
+           feeling sluggish, and fadeAnimation:false drops the per-tile fade
+           compositing that also stutters on weaker GPUs. */
+        zoomSnap={1}
+        zoomDelta={1}
+        fadeAnimation={false}
         style={{ height: '100%', width: '100%' }}
         className={className}
       >
@@ -249,8 +255,9 @@ export default function MapView({
           zoomOffset={base.zoomOffset || 0}
           maxNativeZoom={base.maxNativeZoom}
           maxZoom={base.maxZoom || 19}
-          keepBuffer={2}
+          keepBuffer={1}
           updateWhenZooming={false}
+          updateWhenIdle={true}
           crossOrigin={true}
           eventHandlers={{
             loading: handleTileLoadStart,
@@ -268,7 +275,7 @@ export default function MapView({
             zoomOffset={base.zoomOffset || 0}
             maxNativeZoom={base.maxNativeZoom}
             maxZoom={base.maxZoom || 19}
-            keepBuffer={2}
+            keepBuffer={1}
             updateWhenZooming={false}
             crossOrigin={true}
           />

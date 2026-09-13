@@ -39,7 +39,14 @@ function CitizenPanel({ focus, onFocusLocation, onLocateMe, onReport, located = 
     nearestShelter = null,
     nearestHospital = null,
     primaryRoute = null,
-    warning = null
+    warning = null,
+    riskReason = null,
+    nearbyHazards = [],
+    roadStatus = [],
+    weakInfrastructure = [],
+    locationMode = 'demo',
+    locationStatus = 'SINGTAM · EAST SIKKIM',
+    originLabel = 'Singtam area'
   } = focus || {};
 
   const level = String(dangerLevel || 'LOW').toUpperCase();
@@ -68,7 +75,15 @@ function CitizenPanel({ focus, onFocusLocation, onLocateMe, onReport, located = 
     setLocateMsg(null);
     const r = await onLocateMe();
     setLocating(false);
-    if (!r || !r.ok) setLocateMsg(r && r.reason === 'unsupported' ? 'Location not supported on this device.' : 'Could not get your location — allow location access and retry.');
+    if (!r || !r.ok) {
+      setLocateMsg(r && r.reason === 'unsupported'
+        ? 'Location not supported on this device.'
+        : 'Could not get your location — allow location access and retry.');
+    } else if (r.mode === 'remote') {
+      setLocateMsg("You're outside the covered area — showing the East Sikkim safety map. Use Search or Set on map to check a place here.");
+    } else if (r.mode === 'local') {
+      setLocateMsg(null);
+    }
   }, [onLocateMe]);
 
   const handleShare = useCallback(async () => {
@@ -99,10 +114,18 @@ function CitizenPanel({ focus, onFocusLocation, onLocateMe, onReport, located = 
         <div className="gis-cz-status-text">
           <span className="gis-cz-status-level">{level === 'LOW' ? 'NO ACTIVE ALERT' : `DANGER · ${level}`}</span>
           <span className="gis-cz-status-msg">{warning || 'Stay alert and follow local advisories.'}</span>
+          {riskReason ? <span className="gis-cz-status-why">Why: {riskReason}</span> : null}
         </div>
         {dangerPoint ? (
           <button type="button" className="gis-cz-locate" onClick={() => flyTo(dangerPoint, 14)}>SHOW DANGER</button>
         ) : null}
+      </div>
+
+      {/* 1b. Location-mode status — makes the reference-location strategy
+             explicit so live GPS is never silently shown as demo, or vice-versa. */}
+      <div className={`gis-cz-locmode gis-cz-locmode-${locationMode}`} role="status">
+        <span className="gis-cz-locmode-dot" aria-hidden="true">{locationMode === 'live' ? '📡' : '🧭'}</span>
+        <span className="gis-cz-locmode-text">{locationStatus}</span>
       </div>
 
       {/* 2. Emergency actions — big thumb-friendly grid (Bootstrap row/cols) */}
@@ -161,6 +184,92 @@ function CitizenPanel({ focus, onFocusLocation, onLocateMe, onReport, located = 
         </form>
       ) : null}
 
+      {/* 2c. Nearby hazards — situational awareness, nearest-first */}
+      {nearbyHazards.length ? (
+        <div>
+          <span className="gis-cz-section-label">NEARBY HAZARDS</span>
+          <ul className="gis-cz-hazards">
+            {nearbyHazards.map((h) => (
+              <li key={h.id}>
+                <button
+                  type="button"
+                  className={`gis-cz-hazard${h.isPrimary ? ' gis-cz-hazard-primary' : ''}`}
+                  onClick={() => flyTo(h.location, 14)}
+                  title="Show on map"
+                >
+                  <span className="gis-cz-hazard-dot" aria-hidden="true">{h.dot}</span>
+                  <span className="gis-cz-hazard-body">
+                    <span className="gis-cz-hazard-type">
+                      <span className={`gis-cz-sev sev-${String(h.severity).toLowerCase()}`}>{String(h.severity).toUpperCase()}</span>
+                      {h.type}
+                      {h.isPrimary ? <span className="gis-cz-hazard-badge">PRIMARY</span> : null}
+                    </span>
+                    {h.detectedAgo ? <span className="gis-cz-hazard-time">Detected {h.detectedAgo}</span> : null}
+                  </span>
+                  <span className="gis-cz-hazard-dist">{h.distanceKm.toFixed(1)} km</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          <p className="gis-cz-note m-0">
+            {locationMode === 'live'
+              ? 'Distances from your location.'
+              : `Distances from ${originLabel}. Tap Locate me for your position.`}
+          </p>
+        </div>
+      ) : null}
+
+      {/* 2d. Local conditions — road status + weak infrastructure (curated;
+             the "add road status / vulnerable infrastructure" requirement). */}
+      {(roadStatus.length || weakInfrastructure.length) ? (
+        <div>
+          <span className="gis-cz-section-label">LOCAL CONDITIONS</span>
+
+          {roadStatus.length ? (
+            <ul className="gis-cz-conds">
+              {roadStatus.map((r) => (
+                <li key={r.id}>
+                  <div className={`gis-cz-cond gis-cz-cond-${r.avoid ? 'avoid' : 'caution'}`}>
+                    <span className="gis-cz-cond-ico" aria-hidden="true">{r.avoid ? '⛔' : '⚠️'}</span>
+                    <span className="gis-cz-cond-body">
+                      <span className="gis-cz-cond-title">
+                        {r.name}
+                        <span className="gis-cz-cond-tag">{String(r.status).toUpperCase()}</span>
+                      </span>
+                      <span className="gis-cz-cond-sub">{r.avoid ? 'Avoid — ' : 'Caution — '}{r.reason}</span>
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          {weakInfrastructure.length ? (
+            <ul className="gis-cz-conds">
+              {weakInfrastructure.map((w) => (
+                <li key={w.id}>
+                  <button
+                    type="button"
+                    className="gis-cz-cond gis-cz-cond-infra"
+                    onClick={() => flyTo(w.location, 14)}
+                    title="Show on map"
+                  >
+                    <span className="gis-cz-cond-ico" aria-hidden="true">🏚️</span>
+                    <span className="gis-cz-cond-body">
+                      <span className="gis-cz-cond-title">
+                        Weak infrastructure
+                        <span className="gis-cz-cond-tag">{String(w.severity).toUpperCase()}</span>
+                      </span>
+                      <span className="gis-cz-cond-sub">{w.title}{w.address ? ` · ${w.address}` : ''}</span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
+
       {/* 3. Go to safety — route / shelter / hospital, each with directions */}
       <div>
         <span className="gis-cz-section-label">GET TO SAFETY</span>
@@ -179,6 +288,7 @@ function CitizenPanel({ focus, onFocusLocation, onLocateMe, onReport, located = 
             <span className="gis-cz-card-body">
               <span className="gis-cz-card-title">FIND SHELTER</span>
               <span className="gis-cz-card-sub">{nearestShelter ? nearestShelter.name : 'None nearby'}</span>
+              {nearestShelter ? <span className="gis-cz-card-eta">🚶 {nearestShelter.walkMin} min · 🚗 {nearestShelter.driveMin} min</span> : null}
             </span>
             {nearestShelter ? <span className="gis-cz-card-tag">{nearestShelter.distanceKm} km</span> : null}
           </button>
@@ -193,6 +303,7 @@ function CitizenPanel({ focus, onFocusLocation, onLocateMe, onReport, located = 
             <span className="gis-cz-card-body">
               <span className="gis-cz-card-title">FIND HOSPITAL</span>
               <span className="gis-cz-card-sub">{nearestHospital ? nearestHospital.name : 'None nearby'}</span>
+              {nearestHospital ? <span className="gis-cz-card-eta">🚶 {nearestHospital.walkMin} min · 🚗 {nearestHospital.driveMin} min</span> : null}
             </span>
             {nearestHospital ? <span className="gis-cz-card-tag">{nearestHospital.distanceKm} km</span> : null}
           </button>

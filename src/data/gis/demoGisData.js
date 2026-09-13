@@ -24,7 +24,7 @@
 
 export const DEMO_MAP_CONFIG = {
   initialCenter: [27.2850, 88.5650], // Midpoint of Singtam-Martam-Gangtok NH-10 Corridor
-  initialZoom: 12.8,
+  initialZoom: 13, // integer zoom → clean first paint (no fractional tile scaling)
   // minZoom:3 lets the operator zoom all the way out to the whole of India /
   // the subcontinent / the world (was locked at 9, which trapped the view on
   // the Sikkim corridor and made it look like the map only covered one area).

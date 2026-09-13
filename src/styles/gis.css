@@ -65,13 +65,17 @@
      tactical UI renders under 11px, and primary values/
      headings get real visual weight.
      ===================================================== */
-  --fs-2xs: 10px;   /* legal/attribution text only */
-  --fs-xs: 13.5px;  /* dense metadata, footers, HUD labels */
-  --fs-sm: 15px;    /* section subtitles, panel titles, badges */
-  --fs-base: 16.5px;/* buttons, dock controls, legend rows */
-  --fs-md: 18px;    /* header brand, ticker, panel body text */
-  --fs-lg: 22px;    /* HUD critical values, headings */
-  --fs-xl: 20px;    /* emphasis-only, used sparingly */
+  /* Type scale bumped up per Abhijeet's review ("make it bigger, not smaller;
+     bigger according to device size"). Each step uses clamp() so text GROWS on
+     larger devices/viewports but never drops below the bumped floor — it is
+     never smaller than before on any device. */
+  --fs-2xs: clamp(12px, 0.95vw, 13.5px);   /* legal/attribution text only */
+  --fs-xs:  clamp(16px, 1.15vw, 18px);     /* dense metadata, footers, HUD labels */
+  --fs-sm:  clamp(17.5px, 1.25vw, 19.5px); /* section subtitles, panel titles, badges */
+  --fs-base:clamp(19px, 1.35vw, 21px);     /* buttons, dock controls, legend rows */
+  --fs-md:  clamp(21px, 1.5vw, 23px);      /* header brand, ticker, panel body text */
+  --fs-lg:  clamp(25px, 1.85vw, 28px);     /* HUD critical values, headings */
+  --fs-xl:  clamp(23px, 1.6vw, 25px);      /* emphasis-only, used sparingly */
 }
 
 *,
@@ -686,9 +690,10 @@ body {
   font-size: var(--fs-sm);
   font-weight: 700;
   font-family: var(--font-mono);
-  padding: 6px 0;
+  padding: 7px 4px;
   min-height: 30px;
   text-align: center;
+  white-space: nowrap;
   border-radius: 2px;
   cursor: pointer;
   transition: all 0.12s ease;
@@ -2411,6 +2416,7 @@ body {
 .gis-cz-status-text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
 .gis-cz-status-level { font-weight: 900; font-size: var(--fs-lg); letter-spacing: 0.03em; }
 .gis-cz-status-msg { font-size: var(--fs-sm); font-weight: 600; line-height: 1.3; }
+.gis-cz-status-why { font-size: var(--fs-xs); font-weight: 700; line-height: 1.3; opacity: 0.85; margin-top: 2px; }
 .gis-cz-locate {
   flex: 0 0 auto;
   appearance: none;
@@ -2472,6 +2478,12 @@ body {
   color: var(--accent-strong);
   white-space: nowrap;
 }
+.gis-cz-card-eta {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  line-height: 1.3;
+  white-space: nowrap;
+}
 .gis-cz-foot {
   margin: 2px 0 0;
   font-size: var(--fs-xs);
@@ -2527,6 +2539,159 @@ body {
 
 .gis-cz-note { margin: 8px 0 0; font-size: var(--fs-xs); color: var(--text-muted); line-height: 1.35; }
 .gis-cz-note.gis-cz-ok { color: var(--color-operational); }
+
+/* Location-mode status pill (explicit demo vs live reference strategy) */
+.gis-cz-locmode {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 11px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  font-family: var(--font-mono, monospace);
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+.gis-cz-locmode-dot { font-size: 14px; line-height: 1; }
+.gis-cz-locmode-demo { border-left: 4px solid var(--color-warning); color: var(--color-warning); }
+.gis-cz-locmode-live { border-left: 4px solid var(--color-operational); color: var(--color-operational); }
+.gis-cz-locmode-text { color: var(--text-secondary); }
+
+/* Local conditions — road status + weak infrastructure (curated) */
+.gis-cz-conds { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.gis-cz-cond {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  border-left: 4px solid var(--border-subtle);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  text-align: left;
+}
+button.gis-cz-cond { cursor: pointer; transition: background 0.12s ease, border-color 0.12s ease; }
+button.gis-cz-cond:hover { background: var(--bg-elevated); border-color: var(--border-accent); }
+.gis-cz-cond-avoid { border-left-color: var(--color-critical); }
+.gis-cz-cond-caution { border-left-color: var(--color-warning); }
+.gis-cz-cond-infra { border-left-color: var(--color-info); }
+.gis-cz-cond-ico { font-size: 16px; line-height: 1; flex: 0 0 auto; }
+.gis-cz-cond-body { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.gis-cz-cond-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-base);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+.gis-cz-cond-tag {
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+}
+.gis-cz-cond-sub {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Severity word-chip (Nearby Hazards) — CRITICAL / HIGH / MODERATE / … */
+.gis-cz-sev {
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: #06090b;
+  flex: 0 0 auto;
+}
+.gis-cz-sev.sev-critical    { background: var(--color-critical); color: #fff; }
+.gis-cz-sev.sev-high        { background: var(--color-high); }
+.gis-cz-sev.sev-warning,
+.gis-cz-sev.sev-moderate    { background: var(--color-warning); }
+.gis-cz-sev.sev-operational,
+.gis-cz-sev.sev-low         { background: var(--color-operational); }
+
+/* Citizen-only map-label readability — the "even I can't read it without
+   zooming in" fix. Larger, higher-contrast hazard-type labels at the default
+   citizen zoom; Critical loudest. Scoped to .gis-role-citizen so the dense
+   Authority map keeps its compact tactical labels. The base tactical-label
+   rule (section 9) sets these with !important, so the citizen overrides must
+   also be !important AND more specific to win. */
+.gis-role-citizen .leaflet-tooltip.gis-disaster-type-label {
+  font-size: 19px !important;
+  padding: 5px 13px !important;
+  border-left-width: 5px !important;
+  background: rgba(8, 12, 14, 0.96) !important;
+}
+.gis-role-citizen .leaflet-tooltip.gis-disaster-type-label.sev-critical {
+  font-size: 21px !important;
+  color: #ffe0e1 !important;
+  box-shadow: 0 2px 12px rgba(214, 69, 69, 0.6) !important;
+}
+
+/* Nearby hazards — situational-awareness feed (nearest-first) */
+.gis-cz-hazards { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.gis-cz-hazard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.gis-cz-hazard:hover { background: var(--bg-elevated); border-color: var(--border-accent); }
+.gis-cz-hazard-primary { border-left: 4px solid var(--color-critical); }
+.gis-cz-hazard-dot { font-size: 15px; line-height: 1; flex: 0 0 auto; }
+.gis-cz-hazard-body { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.gis-cz-hazard-type {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-base);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+.gis-cz-hazard-badge {
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--color-critical);
+  color: #fff;
+}
+.gis-cz-hazard-time { font-size: var(--fs-xs); color: var(--text-muted); line-height: 1.2; }
+.gis-cz-hazard-dist {
+  flex: 0 0 auto;
+  font-family: var(--font-mono, monospace);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  color: var(--accent-strong);
+  white-space: nowrap;
+}
 
 /* Report form */
 .gis-cz-report {
@@ -2702,15 +2867,20 @@ body {
   border: 1px solid var(--border-subtle);
   border-left-width: 4px;
   border-radius: 5px;
-  padding: 2px 7px;
+  /* Bigger, readable hazard labels for BOTH roles (Abhijeet: "why it looking
+     like a batch show… even I can't read it if I don't zoom in… make it
+     bigger"). !important because section 9's .leaflet-tooltip rule sets these
+     with !important; a 2-class selector + !important wins. */
+  padding: 4px 10px !important;
   font-family: var(--font-mono, monospace);
-  font-size: 11px;
+  font-size: 16px !important;
   font-weight: 800;
   letter-spacing: 0.05em;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
   white-space: nowrap;
 }
 .leaflet-tooltip.gis-disaster-type-label::before { display: none; } /* no callout arrow */
+.leaflet-tooltip.gis-disaster-type-label.sev-critical { font-size: 17px !important; }
 .gis-disaster-type-label.sev-critical    { border-left-color: var(--color-critical); color: #ffd7d8; }
 .gis-disaster-type-label.sev-high        { border-left-color: var(--color-high); }
 .gis-disaster-type-label.sev-warning     { border-left-color: var(--color-warning); }

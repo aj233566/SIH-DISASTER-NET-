@@ -3,7 +3,6 @@ import MapView from './MapView';
 import DisasterZonesLayer from './layers/DisasterZonesLayer';
 import OpenFreeMapLayer from './layers/OpenFreeMapLayer';
 import FloodSimLayer from './layers/FloodSimLayer';
-import FloodSimControl from './FloodSimControl';
 import IncidentLayer from './layers/IncidentLayer';
 import FacilityLayer from './layers/FacilityLayer';
 import ResourceLayer from './layers/ResourceLayer';
@@ -21,16 +20,14 @@ import LiveQuakeLayer from './layers/LiveQuakeLayer';
 import LiveHospitalLayer from './layers/LiveHospitalLayer';
 import GibsFireLayer from './layers/GibsFireLayer';
 import BhuvanHazardLayer from './layers/BhuvanHazardLayer';
-import SachetAlertTicker from './SachetAlertTicker';
 import CitizenPanel from './CitizenPanel';
 import MyLocationMarker from './MyLocationMarker';
 import { fetchIndiaEarthquakes } from '../../services/gis/liveFeeds';
 import { formatLatLon } from '../../utils/gis/formatCoords';
-import { selectCitizenFocus } from '../../utils/gis/citizenView';
+import { selectCitizenFocus, isWithinOperationalArea, SIMULATED_CITIZEN_LOCATION } from '../../utils/gis/citizenView';
 
 const USER_POINTS_STORAGE_KEY = 'cascade-net.userPoints.v1';
 import TacticalTelemetryHUD from './TacticalTelemetryHUD';
-import FloatingCommandDock from './FloatingCommandDock';
 import { normalizeSimulatorDelta } from '../../services/gis/simulatorAdapter';
 import { routingService } from '../../services/gis/routingService';
 import { calculateRiskHeatmapNodes } from '../../utils/gis/riskHeatmapCalculator';
@@ -171,17 +168,22 @@ export default function GisCommandCenter({
   const toggleAddPointMode = useCallback(() => setAddPointMode((m) => !m), []);
 
   // ---- Live nationwide data feed: USGS earthquakes (real, not demo) --------
+  // This is an AUTHORITY-only overlay (citizen never shows quakes), so skip the
+  // fetch entirely in citizen mode. And DEFER the first fetch by a couple of
+  // seconds so it never competes for the connection with the initial map tiles
+  // loading — that competition was part of the "map loads slow" feeling.
   const [liveQuakes, setLiveQuakes] = useState([]);
   useEffect(() => {
+    if (isCitizen) return undefined;
     let alive = true;
     const load = async () => {
       const q = await fetchIndiaEarthquakes();
       if (alive) setLiveQuakes(q);
     };
-    load();
+    const first = setTimeout(load, 2500);
     const id = setInterval(load, 120000); // refresh every 2 min
-    return () => { alive = false; clearInterval(id); };
-  }, []);
+    return () => { alive = false; clearTimeout(first); clearInterval(id); };
+  }, [isCitizen]);
 
   // Clicking a saved point in the CONTROLS rail flies the map to it and opens
   // its popup. A monotonic nonce lets the same point be re-focused repeatedly.
@@ -288,11 +290,11 @@ export default function GisCommandCenter({
     isCitizen
       ? {
           incidents: true,
-          villages: false,
+          villages: true, // vulnerable/affected settlements (Abhijeet: "visualization of vulnerable roads, villages, and infrastructure")
           hospitals: true,
           shelters: true,
           resources: false,
-          roads: false,
+          roads: true, // curated: only blocked/restricted corridors (see citizenRoads)
           riskZones: true,
           heatmap: false,
           routes: true,
@@ -377,16 +379,27 @@ export default function GisCommandCenter({
     }
   }, [mapInstance]);
 
-  // Citizen "Locate me" — browser geolocation → drop a you-are-here pin, fly to
-  // it, and recompute nearest shelter/hospital from the citizen's real position.
+  // Citizen "Locate me" — browser geolocation. A real fix is adopted as the
+  // "you are here" reference ONLY when it lands inside the demo operational
+  // area; a fix from far outside it (someone opening the demo from another
+  // city/country) would otherwise produce a nonsensical ~1000-km "nearest
+  // shelter", so we keep the clearly-labelled SIMULATED local position and the
+  // local map view instead, and tell the citizen why.
   const handleLocateMe = useCallback(() => new Promise((resolve) => {
     if (!('geolocation' in navigator)) { resolve({ ok: false, reason: 'unsupported' }); return; }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        setUserLocation(loc);
-        if (mapInstance) mapInstance.setView([loc.lat, loc.lng], 13, { animate: true });
-        resolve({ ok: true, loc });
+        if (isWithinOperationalArea(loc)) {
+          setUserLocation(loc);
+          if (mapInstance) mapInstance.setView([loc.lat, loc.lng], 14, { animate: true });
+          resolve({ ok: true, mode: 'local', loc });
+        } else {
+          // Not in the disaster area — stay on the simulated local scenario.
+          setUserLocation(null);
+          if (mapInstance) mapInstance.setView([SIMULATED_CITIZEN_LOCATION.lat, SIMULATED_CITIZEN_LOCATION.lng], 13, { animate: true });
+          resolve({ ok: true, mode: 'remote' });
+        }
       },
       (err) => resolve({ ok: false, reason: err.message || 'denied' }),
       { enableHighAccuracy: true, timeout: 8000 }
@@ -403,7 +416,7 @@ export default function GisCommandCenter({
       description: payload.description,
       location: userLocation
         ? { latitude: userLocation.lat, longitude: userLocation.lng, address: 'Citizen-reported location' }
-        : { latitude: 27.33, longitude: 88.61, address: 'Sikkim (approx.)' },
+        : { latitude: SIMULATED_CITIZEN_LOCATION.lat, longitude: SIMULATED_CITIZEN_LOCATION.lng, address: 'Singtam area' },
       reportedBy: 'citizen'
     };
     try {
@@ -430,10 +443,13 @@ export default function GisCommandCenter({
 
   // ---- Citizen-mode curated subsets & focus (computed from the SAME data) ----
   // Only the high-value, actionable features reach the citizen map.
+  // All active incidents reach the citizen map now (not just Critical/High) so
+  // every nearby disaster type is visible — including weak-infrastructure and
+  // slope-crack hazards. Severity colouring keeps the hierarchy (landslide /
+  // critical loud; operational muted = the "secondary visual treatment").
   const citizenIncidents = useMemo(
     () => filteredIncidents.filter(
-      (i) => (i.severity === 'Critical' || i.severity === 'High') &&
-             String(i.status || 'Active').toLowerCase() !== 'resolved'
+      (i) => String(i.status || 'Active').toLowerCase() !== 'resolved'
     ),
     [filteredIncidents]
   );
@@ -442,6 +458,26 @@ export default function GisCommandCenter({
       (z) => z.riskLevel === 'Critical' || z.riskLevel === 'High'
     ),
     [activeMapState.riskZones]
+  );
+  // Curated road status for the citizen map — only the blocked / restricted
+  // corridors they must avoid or approach with caution (never the full network).
+  const citizenRoads = useMemo(
+    () => (activeMapState.roads || []).filter((r) => {
+      const s = String(r.status || '').toLowerCase();
+      return s === 'blocked' || s === 'restricted' || s === 'one-lane';
+    }),
+    [activeMapState.roads]
+  );
+  // Curated villages for the citizen map — only the vulnerable / affected ones
+  // (at-risk or cut-off), so citizens see threatened settlements without the
+  // full operational settlement layer.
+  const citizenVillages = useMemo(
+    () => (activeMapState.villages || []).filter((v) => {
+      const lvl = String(v.riskLevel || '').toLowerCase();
+      const conn = String(v.connectivityStatus || '').toLowerCase();
+      return lvl === 'critical' || lvl === 'high' || conn === 'isolated' || conn === 'restricted';
+    }),
+    [activeMapState.villages]
   );
   // Nearest-to-danger selection powering the CitizenPanel (see citizenView.js).
   // When the citizen has shared their location, nearest facilities are measured
@@ -453,6 +489,7 @@ export default function GisCommandCenter({
       shelters: activeMapState.shelters,
       hospitals: activeMapState.hospitals,
       routes,
+      roads: activeMapState.roads,
       reference: userLocation
     }),
     [filteredIncidents, activeMapState, routes, userLocation]
@@ -550,7 +587,7 @@ export default function GisCommandCenter({
 
           {/* Road Network & Mountain Connectivity Corridor Layer */}
           <RoadStatusLayer
-            roads={activeMapState.roads}
+            roads={isCitizen ? citizenRoads : activeMapState.roads}
             visible={layerVisibility.roads}
             selectedRoadId={selectedFeature && selectedFeature.id}
             onSelectRoad={handleSelect}
@@ -568,7 +605,7 @@ export default function GisCommandCenter({
 
           {/* Mountain Villages & Isolated Communities Layer */}
           <VillageLayer
-            villages={activeMapState.villages}
+            villages={isCitizen ? citizenVillages : activeMapState.villages}
             roads={activeMapState.roads}
             visible={layerVisibility.villages}
             selectedVillageId={selectedFeature && selectedFeature.id}
@@ -626,8 +663,15 @@ export default function GisCommandCenter({
           {/* Real-time flood simulation (Assam / Brahmaputra) */}
           <FloodSimLayer active={floodActive} level={floodLevel} />
 
-          {/* Citizen "you are here" pin (after Locate me) */}
-          {isCitizen ? <MyLocationMarker location={userLocation} /> : null}
+          {/* Citizen "you are here" pin — the real GPS fix once shared and
+              local, otherwise a clearly-labelled SIMULATED local position so
+              the "X km away" distances have a visible origin on the map. */}
+          {isCitizen ? (
+            <MyLocationMarker
+              location={userLocation || citizenFocus.myPoint}
+              simulated={!userLocation}
+            />
+          ) : null}
     </MapView>
   );
 
@@ -736,13 +780,9 @@ export default function GisCommandCenter({
         {/* Authority operational chrome */}
         {!isCitizen && (
         <>
-        {/* Real-time flood simulation timeline (Assam / Brahmaputra) */}
-        <FloodSimControl
-          active={floodActive}
-          onToggleActive={(v) => { setFloodActive(v); if (v && mapInstance) mapInstance.setView([26.5, 92.6], 8); }}
-          level={floodLevel}
-          onLevelChange={setFloodLevel}
-        />
+        {/* START FLOOD SIM · ASSAM removed from Authority per Abhijeet's review
+            ("ye bhi hata de") — the Assam/Brahmaputra flood sim is off-topic for
+            the Sikkim landslide operational picture. */}
 
         {/* 3. Left Operations Rail — SITUATION telemetry + LEGEND docked
              together as one full-height rail on desktop. The wrapper is
@@ -765,9 +805,9 @@ export default function GisCommandCenter({
           />
 
           <MapLegend hudMode={hudMode} isSimActive={simScenario !== 'BASELINE'} />
-
-          {/* LIVE national disaster alerts (NDMA Sachet CAP feed) */}
-          <SachetAlertTicker hudMode={hudMode} />
+          {/* NDMA Sachet CAP feed removed from Authority per Abhijeet's review
+              ("is authority me NDMA Sachet hata de") — the national CAP ticker
+              is off-topic for the Sikkim landslide operational picture. */}
         </div>
 
         {/* 4. Right Tactical Control Matrix */}
@@ -787,21 +827,9 @@ export default function GisCommandCenter({
           onDeletePoint={handleDeletePoint}
         />
 
-        {/* 6. Floating Command Dock (Single Compact Row Island) */}
-        <FloatingCommandDock
-          mapStyle={mapStyle}
-          onSetMapStyle={handleSetMapStyle}
-          simScenario={simScenario}
-          onSetScenario={handleSetScenario}
-          hudMode={hudMode}
-          onSetHudMode={setHudMode}
-          onResetView={handleResetView}
-          activeCorridorName={recommendedRoute ? recommendedRoute.name : 'Western Ridge Alternate'}
-          activeCorridorEta={recommendedRoute ? `${recommendedRoute.travelTimeEtaMin || 26} mins` : '26 mins'}
-          isLiveTraffic={isLiveTraffic}
-          cursorReadout={cursorReadout}
-          cursorMapsHref={cursorMapsHref}
-        />
+        {/* Floating Command Dock (tactical scenario / basemap / HUD island)
+            removed from Authority per Abhijeet's review ("ye bhi hata de").
+            Basemap + reset remain available in the right CONTROLS panel. */}
 
         {/* 7. Active add-mode banner (the toggle now lives in the CONTROLS
              rail; this only appears while placing a point). */}

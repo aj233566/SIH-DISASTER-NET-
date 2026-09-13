@@ -51,31 +51,56 @@ function RiskZoneLayer({
     );
   };
 
-  // Determine styling based on risk level and selection
+  // Determine styling based on risk level and selection.
+  // A deliberate visual hierarchy so danger is obvious at a glance:
+  //   Critical → brightest red, thickest, SOLID heavy outline, highest fill
+  //   High     → orange, medium weight, solid
+  //   Warning  → amber, lighter, short dash (recedes)
+  //   Low      → green, faint, sparse dash (context only)
+  // Critical is intentionally the strongest layer on the map (landslide-
+  // critical zones read loudest); lower severities progressively recede.
   const getZoneStyle = (riskLevel, isSelected) => {
     switch (riskLevel) {
       case 'Critical':
         return {
-          color: '#D64545',
-          fillColor: '#D64545',
-          fillOpacity: isSelected ? 0.35 : 0.22,
-          weight: isSelected ? 3 : 2,
-          dashArray: '4, 6'
+          color: '#FF2D3F',
+          fillColor: '#E23D3D',
+          fillOpacity: isSelected ? 0.5 : 0.38,
+          weight: isSelected ? 5 : 3.6,
+          dashArray: null // solid = strongest
         };
       case 'High':
         return {
-          color: '#D97732',
-          fillColor: '#D97732',
-          fillOpacity: isSelected ? 0.32 : 0.18,
-          weight: isSelected ? 3 : 1.8
+          color: '#F97316',
+          fillColor: '#F97316',
+          fillOpacity: isSelected ? 0.36 : 0.26,
+          weight: isSelected ? 4 : 2.8,
+          dashArray: null
         };
       case 'Warning':
+      case 'Moderate':
+        return {
+          color: '#EAB308',
+          fillColor: '#EAB308',
+          fillOpacity: isSelected ? 0.28 : 0.18,
+          weight: isSelected ? 3 : 2.2,
+          dashArray: '5, 5'
+        };
+      case 'Low':
+        return {
+          color: '#22C55E',
+          fillColor: '#22C55E',
+          fillOpacity: isSelected ? 0.2 : 0.12,
+          weight: isSelected ? 2.4 : 1.8,
+          dashArray: '3, 7'
+        };
       default:
         return {
           color: '#C9A227',
           fillColor: '#C9A227',
-          fillOpacity: isSelected ? 0.28 : 0.15,
-          weight: isSelected ? 2.5 : 1.5
+          fillOpacity: isSelected ? 0.28 : 0.16,
+          weight: isSelected ? 2.5 : 1.8,
+          dashArray: '5, 5'
         };
     }
   };

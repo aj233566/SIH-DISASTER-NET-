@@ -28,10 +28,15 @@ export default function DisasterZonesLayer({ visible = true, onSelectZone }) {
             radius={z.radiusKm * 1000}
             pathOptions={{
               color,
-              weight: 2,
+              // Dimmed to a faint BACKGROUND context ring so it no longer
+              // competes with the local operational hazards (esp. the Critical
+              // landslide). Still fully visible and toggleable via the ZONES
+              // layer control — this only lowers its default visual weight.
+              weight: 1,
+              opacity: 0.55,
               fillColor: color,
-              fillOpacity: 0.12,
-              dashArray: '6 4'
+              fillOpacity: 0.05,
+              dashArray: '3 8'
             }}
             eventHandlers={{
               click: () => {

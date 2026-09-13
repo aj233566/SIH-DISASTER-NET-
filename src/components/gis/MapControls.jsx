@@ -170,8 +170,8 @@ function MapControls({
 
           {/* Section 4: Camera Reticle Reset */}
           <div className="gis-controls-section">
-            <button className="gis-btn-reset-full" onClick={onResetView} title="Reset camera to operational bounding envelope">
-              [ ⌖ RESET RETICLE ]
+            <button className="gis-btn-reset-full" onClick={onResetView} title="Reset the map back to the operational area">
+              ⌖ RESET VIEW
             </button>
           </div>
 
