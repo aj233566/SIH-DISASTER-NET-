@@ -69,17 +69,14 @@ function Login() {
       // =================================
 
       if (data.user.role === "admin") {
-        navigate("/admin", {
-          replace: true,
-        });
-      } else if (data.user.role === "authority") {
-        navigate("/command-center", {
-          replace: true,
-        });
+        navigate("/admin", { replace: true });
+      } else if (
+        data.user.role === "authority" &&
+        data.user.authorityStatus === "verified"
+      ) {
+        navigate("/command-center", { replace: true });
       } else {
-        navigate("/dashboard", {
-          replace: true,
-        });
+        navigate("/dashboard", { replace: true });
       }
     } catch (error) {
       setError(error.message || "Unable to login. Please try again.");

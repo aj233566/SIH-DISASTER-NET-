@@ -162,10 +162,13 @@ const signup = async (req, res) => {
 
         return res.status(201).json({
             success: true,
+
             message:
                 selectedRole === "authority"
                     ? "Authority account created successfully. Your account is waiting for admin approval."
                     : "Account created successfully.",
+
+            requiresApproval: selectedRole === "authority",
 
             user: {
                 id: user._id,
@@ -290,17 +293,14 @@ const login = async (req, res) => {
         const token = jwt.sign(
             {
                 userId: user._id,
-                role: user.role
+                role: user.role,
+                authorityStatus: user.authorityStatus
             },
-
             process.env.JWT_SECRET,
-
             {
                 expiresIn: "7d"
             }
         );
-
-
         // ---------------------------------------------
         // Response
         // ---------------------------------------------
@@ -326,8 +326,7 @@ const login = async (req, res) => {
                 designation: user.designation,
                 employeeId: user.employeeId,
 
-                authorityStatus:
-                    user.authorityStatus
+                authorityStatus: user.authorityStatus
             }
         });
 

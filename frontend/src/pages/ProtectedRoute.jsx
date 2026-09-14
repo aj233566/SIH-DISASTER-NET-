@@ -1,97 +1,53 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 
-function ProtectedRoute({ children, allowedRoles }) {
-    const token = localStorage.getItem("token");
+function getStoredUser() {
+  try {
     const storedUser = localStorage.getItem("user");
+    return storedUser ? JSON.parse(storedUser) : null;
+  } catch {
+    return null;
+  }
+}
 
-    let user;
+function ProtectedRoute({ children, allowedRoles = [] }) {
+  const location = useLocation();
 
-    try {
-        user = storedUser
-            ? JSON.parse(storedUser)
-            : null;
-    } catch {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
+  const token = localStorage.getItem("token");
+  const user = getStoredUser();
 
-        return (
-            <Navigate
-                to="/login"
-                replace
-            />
-        );
+  // -----------------------------------------
+  // NOT LOGGED IN
+  // -----------------------------------------
+  if (!token || !user) {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
+
+  // -----------------------------------------
+  // AUTHORITY MUST BE VERIFIED
+  // -----------------------------------------
+  if (user.role === "authority" && user.authorityStatus !== "verified") {
+    return <Navigate to="/login" replace />;
+  }
+
+  // -----------------------------------------
+  // ROLE CHECK
+  // -----------------------------------------
+  if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+    if (user.role === "admin") {
+      return <Navigate to="/admin" replace />;
     }
 
-    // Not logged in
-    if (!token || !user) {
-        return (
-            <Navigate
-                to="/login"
-                replace
-            />
-        );
+    if (user.role === "authority" && user.authorityStatus === "verified") {
+      return <Navigate to="/command-center" replace />;
     }
 
-    // Role check
-    if (
-        allowedRoles &&
-        !allowedRoles.includes(user.role)
-    ) {
-        if (user.role === "admin") {
-            return (
-                <Navigate
-                    to="/admin"
-                    replace
-                />
-            );
-        }
+    return <Navigate to="/dashboard" replace />;
+  }
 
-        if (
-            user.role === "authority" &&
-            user.authorityStatus === "verified"
-        ) {
-            return (
-                <Navigate
-                    to="/command-center"
-                    replace
-                />
-            );
-        }
-
-        if (user.role === "citizen") {
-            return (
-                <Navigate
-                    to="/dashboard"
-                    replace
-                />
-            );
-        }
-
-        return (
-            <Navigate
-                to="/login"
-                replace
-            />
-        );
-    }
-
-    // Authority approval check
-    if (
-        user.role === "authority" &&
-        user.authorityStatus !== "verified"
-    ) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-
-        return (
-            <Navigate
-                to="/login"
-                replace
-            />
-        );
-    }
-
-    return children;
+  // -----------------------------------------
+  // AUTHORIZED
+  // -----------------------------------------
+  return children;
 }
 
 export default ProtectedRoute;
