@@ -1,0 +1,1280 @@
+/* Multilingual Notifications Styling */
+
+.notif-hub-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.notif-channel-summary-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.channel-status-card {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.channel-icon-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-sm);
+  background-color: var(--elevated);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--info);
+  flex-shrink: 0;
+}
+
+.channel-info h4 {
+  font-size: 0.9rem;
+  margin: 0 0 2px;
+}
+
+.channel-info p {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Notification Feed */
+.notif-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.notif-feed-card {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.notif-feed-card:hover {
+  border-color: var(--border-light);
+  background-color: var(--elevated);
+}
+
+.notif-feed-card.unread {
+  border-left: 4px solid var(--critical);
+  background-color: rgba(214, 69, 69, 0.03);
+}
+
+.notif-channel-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.notif-channel-badge.browser {
+  color: #8ac0d1;
+  border-color: var(--info-border);
+}
+
+.notif-channel-badge.sms {
+  color: #ffd454;
+  border-color: var(--warning-border);
+}
+
+.notif-channel-badge.email {
+  color: #ffa466;
+  border-color: var(--high-risk-border);
+}
+
+.notif-channel-badge.in_app {
+  color: var(--text-secondary);
+}
+
+.notif-main-body {
+  flex: 1;
+}
+
+.notif-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.notif-title-row h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.notif-message-text {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin-bottom: 8px;
+}
+
+.notif-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+
+.notif-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Compose Modal */
+.broadcast-form-group {
+  margin-bottom: 14px;
+}
+
+.broadcast-form-group label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+/* =========================================================
+   SENTRY · SIH26191 NOTIFICATION HUB
+   Missing Operational UI Classes
+   ========================================================= */
+
+/* ---------- Main panel ---------- */
+
+.ops-panel {
+  width: 100%;
+  background-color: var(--card, #1b2226);
+  border: 1px solid var(--border, #303a3f);
+  border-radius: var(--radius-md, 6px);
+  overflow: hidden;
+}
+
+.ops-panel-header {
+  min-height: 72px;
+  padding: 16px 20px;
+  background-color: var(--elevated, #222b30);
+  border-bottom: 1px solid var(--border, #303a3f);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ops-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  margin: 0;
+  color: var(--text-primary, #f1f5f6);
+
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.ops-panel-title svg {
+  flex-shrink: 0;
+}
+
+
+/* ---------- Buttons ---------- */
+
+.btn-ops {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  min-height: 36px;
+  padding: 7px 13px;
+
+  border: 1px solid var(--border, #303a3f);
+  border-radius: var(--radius-sm, 4px);
+
+  background-color: var(--card, #1b2226);
+  color: var(--text-primary, #f1f5f6);
+
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.btn-ops:hover {
+  background-color: var(--elevated, #222b30);
+  border-color: var(--border-light, #4a565c);
+}
+
+.btn-ops:active {
+  transform: translateY(1px);
+}
+
+.btn-ops:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+
+/* Small button */
+
+.btn-ops-sm {
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: 0.74rem;
+}
+
+
+/* Primary button */
+
+.btn-ops-primary {
+  background-color: var(--accent, #4f46e5);
+  border-color: var(--accent, #4f46e5);
+  color: #ffffff;
+}
+
+.btn-ops-primary:hover {
+  background-color: #4338ca;
+  border-color: #4338ca;
+  color: #ffffff;
+}
+
+
+/* Success button */
+
+.btn-ops-success {
+  background-color: #183c2c;
+  border-color: #2f8f62;
+  color: #72d6a3;
+}
+
+.btn-ops-success:hover {
+  background-color: #20513b;
+}
+
+
+/* Warning button */
+
+.btn-ops-warning {
+  background-color: #403719;
+  border-color: #8e7822;
+  color: #ffd454;
+}
+
+.btn-ops-warning:hover {
+  background-color: #50461d;
+}
+
+
+/* Critical / danger button */
+
+.btn-ops-danger {
+  background-color: #401f22;
+  border-color: #8d343a;
+  color: #ff8585;
+}
+
+.btn-ops-danger:hover {
+  background-color: #52262a;
+}
+
+
+/* ---------- Notification filters ---------- */
+
+.filter-chip-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  min-height: 34px;
+  padding: 6px 12px;
+
+  background-color: transparent;
+  border: 1px solid var(--border, #303a3f);
+  border-radius: var(--radius-sm, 4px);
+
+  color: var(--text-secondary, #aeb9bd);
+
+  font-family: inherit;
+  font-size: 0.73rem;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.filter-chip-btn:hover {
+  background-color: var(--elevated, #222b30);
+  border-color: var(--border-light, #4a565c);
+  color: var(--text-primary, #f1f5f6);
+}
+
+.filter-chip-btn.active {
+  background-color: rgba(79, 70, 229, 0.14);
+  border-color: var(--accent, #4f46e5);
+  color: #a5b4fc;
+}
+
+
+/* ---------- Input ---------- */
+
+.ops-input {
+  width: 100%;
+  min-height: 36px;
+
+  padding: 7px 11px;
+
+  background-color: var(--bg-primary, #101518);
+  border: 1px solid var(--border, #303a3f);
+  border-radius: var(--radius-sm, 4px);
+
+  color: var(--text-primary, #f1f5f6);
+
+  font-family: inherit;
+  font-size: 0.78rem;
+
+  outline: none;
+
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.ops-input::placeholder {
+  color: var(--text-muted, #718087);
+}
+
+.ops-input:hover {
+  border-color: var(--border-light, #4a565c);
+}
+
+.ops-input:focus {
+  border-color: var(--accent, #4f46e5);
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.12);
+}
+
+
+/* ---------- Select ---------- */
+
+.ops-select {
+  width: 100%;
+  min-height: 36px;
+
+  padding: 7px 32px 7px 10px;
+
+  background-color: var(--bg-primary, #101518);
+  border: 1px solid var(--border, #303a3f);
+  border-radius: var(--radius-sm, 4px);
+
+  color: var(--text-primary, #f1f5f6);
+
+  font-family: inherit;
+  font-size: 0.78rem;
+
+  outline: none;
+  cursor: pointer;
+
+  appearance: auto;
+}
+
+.ops-select:hover {
+  border-color: var(--border-light, #4a565c);
+}
+
+.ops-select:focus {
+  border-color: var(--accent, #4f46e5);
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.12);
+}
+
+.ops-select option {
+  background-color: #161d20;
+  color: #f1f5f6;
+}
+
+
+/* ---------- Notification toolbar ---------- */
+
+.notification-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+
+  padding: 14px 18px;
+
+  background-color: var(--card, #1b2226);
+  border-bottom: 1px solid var(--border, #303a3f);
+}
+
+.notification-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+
+/* ---------- Search wrapper ---------- */
+
+.notification-search-wrapper {
+  position: relative;
+  width: 220px;
+  flex-shrink: 0;
+}
+
+.notification-search-wrapper .ops-input {
+  padding-left: 34px;
+}
+
+.notification-search-icon {
+  position: absolute;
+
+  left: 11px;
+  top: 50%;
+
+  transform: translateY(-50%);
+
+  color: var(--text-muted, #718087);
+
+  pointer-events: none;
+}
+
+
+/* ---------- Notification list ---------- */
+
+.notif-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  padding: 16px 18px;
+}
+
+
+/* ---------- Empty state ---------- */
+
+.notif-empty-state {
+  padding: 45px 20px;
+
+  text-align: center;
+
+  color: var(--text-muted, #718087);
+}
+
+.notif-empty-state svg {
+  margin-bottom: 10px;
+  opacity: 0.6;
+}
+
+.notif-empty-state h3 {
+  margin: 0 0 5px;
+
+  color: var(--text-secondary, #aeb9bd);
+
+  font-size: 0.95rem;
+}
+
+.notif-empty-state p {
+  margin: 0;
+
+  font-size: 0.75rem;
+}
+
+
+/* =========================================================
+   NOTIFICATION TYPE COLORS
+   ========================================================= */
+
+.notif-feed-card.info {
+  border-left: 3px solid var(--info, #4da3c7);
+}
+
+.notif-feed-card.warning {
+  border-left: 3px solid var(--warning, #d8b536);
+}
+
+.notif-feed-card.critical {
+  border-left: 3px solid var(--critical, #d64545);
+}
+
+
+/* ---------- Delivery status ---------- */
+
+.notif-delivered {
+  color: #4caf78;
+}
+
+.notif-pending {
+  color: #d8b536;
+}
+
+.notif-failed {
+  color: #d64545;
+}
+
+
+/* ---------- Unread indicator ---------- */
+
+.notif-unread-dot {
+  width: 7px;
+  height: 7px;
+
+  border-radius: 50%;
+
+  background-color: var(--critical, #d64545);
+
+  flex-shrink: 0;
+}
+
+
+/* ---------- Mark read button ---------- */
+
+.notif-mark-read-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  padding: 5px 8px;
+
+  background-color: transparent;
+
+  border: 1px solid var(--border, #303a3f);
+  border-radius: 4px;
+
+  color: var(--text-muted, #718087);
+
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.notif-mark-read-btn:hover {
+  color: var(--text-primary, #f1f5f6);
+  border-color: var(--border-light, #4a565c);
+  background-color: var(--elevated, #222b30);
+}
+
+
+/* =========================================================
+   BROADCAST FORM
+   ========================================================= */
+
+.broadcast-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.broadcast-form-group {
+  margin-bottom: 14px;
+}
+
+.broadcast-form-group label {
+  display: block;
+
+  margin-bottom: 6px;
+
+  color: var(--text-muted, #718087);
+
+  font-size: 0.72rem;
+  font-weight: 700;
+
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.broadcast-form-group input,
+.broadcast-form-group textarea,
+.broadcast-form-group select {
+  width: 100%;
+}
+
+.broadcast-form-group textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+
+/* ---------- Modal footer ---------- */
+
+.broadcast-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+
+  padding-top: 12px;
+
+  border-top: 1px solid var(--border, #303a3f);
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 991.98px) {
+  .ops-panel-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .notification-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .notification-search-wrapper {
+    width: 100%;
+  }
+}
+
+
+@media (max-width: 767.98px) {
+  .notif-channel-summary-row {
+    grid-template-columns: 1fr;
+  }
+
+  .notif-feed-card {
+    padding: 13px 14px;
+  }
+
+  .notif-title-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .notif-meta-row {
+    gap: 9px;
+  }
+
+  .notification-filter-group {
+    width: 100%;
+  }
+
+  .filter-chip-btn {
+    flex: 1 1 auto;
+  }
+
+  .broadcast-form-actions {
+    flex-direction: column;
+  }
+
+  .broadcast-form-actions .btn-ops {
+    width: 100%;
+  }
+}
+
+
+@media (max-width: 575.98px) {
+  .ops-panel-header {
+    padding: 13px 14px;
+  }
+
+  .notif-list-container {
+    padding: 12px;
+  }
+
+  .channel-status-card {
+    padding: 12px;
+  }
+
+  .btn-ops {
+    min-height: 34px;
+  }
+
+  .filter-chip-btn {
+    font-size: 0.68rem;
+    padding: 6px 8px;
+  }
+}
+
+/* =========================================================
+   SENTRY · SIH26191 BROADCAST MODAL
+   ========================================================= */
+
+.ops-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background: rgba(8, 12, 14, 0.82);
+
+  overflow-y: auto;
+}
+
+.ops-modal-dialog {
+  position: relative;
+
+  width: 100%;
+  max-width: 650px;
+
+  max-height: calc(100vh - 40px);
+
+  margin: auto;
+
+  background-color: var(--card, #1b2226);
+
+  border: 1px solid var(--border, #303a3f);
+
+  border-radius: var(--radius-md, 6px);
+
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+
+  overflow: hidden;
+
+  animation: cascadeModalIn 0.18s ease-out;
+}
+
+.ops-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+
+  padding: 15px 18px;
+
+  background-color: var(--elevated, #222b30);
+
+  border-bottom: 1px solid var(--border, #303a3f);
+}
+
+.ops-modal-header .ops-panel-title {
+  margin: 0;
+}
+
+.ops-modal-body {
+  padding: 20px;
+
+  max-height: calc(100vh - 150px);
+
+  overflow-y: auto;
+}
+
+.ops-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+
+  gap: 8px;
+
+  padding: 14px 18px;
+
+  background-color: var(--elevated, #222b30);
+
+  border-top: 1px solid var(--border, #303a3f);
+}
+
+@keyframes cascadeModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+
+/* =========================================================
+   BROADCAST MODAL RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 767.98px) {
+  .ops-modal-backdrop {
+    align-items: flex-start;
+
+    padding: 12px;
+  }
+
+  .ops-modal-dialog {
+    max-height: calc(100vh - 24px);
+
+    margin-top: 12px;
+  }
+
+  .ops-modal-header {
+    padding: 13px 14px;
+  }
+
+  .ops-modal-body {
+    padding: 15px;
+  }
+
+  .ops-modal-footer {
+    padding: 12px 14px;
+  }
+
+  .ops-modal-body .row {
+    --bs-gutter-y: 0.75rem;
+  }
+}
+
+
+/* Very small phones */
+
+@media (max-width: 575.98px) {
+  .ops-modal-backdrop {
+    padding: 8px;
+  }
+
+  .ops-modal-dialog {
+    max-height: calc(100vh - 16px);
+
+    margin-top: 8px;
+  }
+
+  .ops-modal-body {
+    padding: 12px;
+  }
+
+  .ops-modal-header {
+    padding: 12px;
+  }
+
+  .ops-modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+
+    padding: 10px 12px;
+  }
+
+  .ops-modal-footer .btn-ops,
+  .ops-modal-body+.btn-ops {
+    width: 100%;
+  }
+
+  .ops-modal-body .d-flex.justify-content-end {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .ops-modal-body .d-flex.justify-content-end .btn-ops {
+    width: 100%;
+  }
+}
+
+/* ============================================================
+   SENTRY · SIH26191 CITIZEN DASHBOARD
+   AUTHORITY NOTIFICATIONS
+   ============================================================ */
+
+#citizen-notifications {
+  scroll-margin-top: 24px;
+}
+
+#citizen-notifications .citizen-card {
+  position: relative;
+  overflow: hidden;
+}
+
+
+/* ============================================================
+   NOTIFICATION HEADER
+   ============================================================ */
+
+#citizen-notifications .citizen-card-header {
+  margin-bottom: 8px;
+}
+
+#citizen-notifications .citizen-card-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+#citizen-notifications .citizen-card-title::before {
+  content: "🔔";
+  font-size: 17px;
+}
+
+
+/* ============================================================
+   NOTIFICATION LIST
+   ============================================================ */
+
+#citizen-notifications .data-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 10px;
+}
+
+
+/* ============================================================
+   INDIVIDUAL NOTIFICATION
+   ============================================================ */
+
+#citizen-notifications .data-list > button {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  padding: 0;
+  margin: 0;
+}
+
+#citizen-notifications .data-list > button:last-child {
+  border-bottom: 0;
+}
+
+
+/* Notification row */
+
+#citizen-notifications .data-list > button .data-row {
+  position: relative;
+  width: 100%;
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 14px !important;
+
+  padding: 17px 4px !important;
+
+  border-radius: 10px;
+
+  transition:
+    background 0.18s ease,
+    transform 0.18s ease;
+}
+
+
+/* Hover */
+
+#citizen-notifications
+  .data-list
+  > button:hover
+  .data-row {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+
+/* Unread notification */
+
+#citizen-notifications
+  .data-list
+  > button:has(
+    [style*="background: rgb(220, 53, 69)"]
+  )
+  .data-row {
+  background: rgba(220, 53, 69, 0.045);
+}
+
+
+/* ============================================================
+   UNREAD DOT
+   ============================================================ */
+
+#citizen-notifications .data-row > div:first-child {
+  width: 10px !important;
+  min-width: 10px !important;
+  height: 10px !important;
+
+  margin-top: 7px !important;
+
+  border-radius: 50%;
+
+  flex-shrink: 0;
+}
+
+
+/* ============================================================
+   TITLE
+   ============================================================ */
+
+#citizen-notifications .data-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f5f7f9;
+
+  line-height: 1.4;
+}
+
+
+/* ============================================================
+   MESSAGE
+   ============================================================ */
+
+#citizen-notifications .data-meta {
+  color: #aeb8c2;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+#citizen-notifications
+  .data-row
+  .data-meta:nth-of-type(1) {
+  color: #c1cad2;
+}
+
+
+/* Time/read status */
+
+#citizen-notifications
+  .data-row
+  .data-meta:last-child {
+  color: #737f89;
+  font-size: 12px;
+}
+
+
+/* ============================================================
+   NOTIFICATION TYPE BADGES
+   ============================================================ */
+
+#citizen-notifications .status-badge {
+  flex-shrink: 0;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 26px;
+
+  padding: 4px 9px;
+
+  border-radius: 999px;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  letter-spacing: 0.06em;
+}
+
+
+/* Critical */
+
+#citizen-notifications
+  .status-badge.status-danger {
+  color: #ffb6b6;
+  background: rgba(220, 53, 69, 0.14);
+  border: 1px solid rgba(220, 53, 69, 0.35);
+}
+
+
+/* Warning */
+
+#citizen-notifications
+  .status-badge.status-warning {
+  color: #ffd18a;
+  background: rgba(230, 145, 48, 0.12);
+  border: 1px solid rgba(230, 145, 48, 0.30);
+}
+
+
+/* Information */
+
+#citizen-notifications
+  .status-badge.status-safe {
+  color: #8fe0b2;
+  background: rgba(41, 179, 104, 0.10);
+  border: 1px solid rgba(41, 179, 104, 0.25);
+}
+
+
+/* ============================================================
+   UNREAD NOTIFICATION
+   ============================================================ */
+
+#citizen-notifications
+  .data-list
+  > button
+  .data-row {
+  min-height: 76px;
+}
+
+
+/* ============================================================
+   UNREAD TITLE EMPHASIS
+   ============================================================ */
+
+#citizen-notifications
+  .data-list
+  > button:hover
+  .data-name {
+  color: #ffffff;
+}
+
+
+/* ============================================================
+   HEADER UNREAD COUNTER
+   ============================================================ */
+
+#citizen-notifications
+  .citizen-card-header
+  > .status-badge {
+  min-width: 72px;
+
+  color: #ffb4b4;
+  background: rgba(220, 53, 69, 0.12);
+
+  border: 1px solid rgba(220, 53, 69, 0.30);
+}
+
+
+/* ============================================================
+   EMPTY STATE
+   ============================================================ */
+
+#citizen-notifications
+  .citizen-card-muted {
+  line-height: 1.6;
+}
+
+
+/* ============================================================
+   "SHOWING 5 MOST RECENT"
+   ============================================================ */
+
+#citizen-notifications
+  > .citizen-card
+  > div:last-child {
+  color: #7f8992;
+}
+
+
+/* ============================================================
+   TOP NOTIFICATION BUTTON
+   ============================================================ */
+
+.citizen-actions .citizen-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+
+/* Notification count badge inside top button */
+
+.citizen-actions
+  .citizen-btn-secondary
+  span {
+  line-height: 1;
+  font-weight: 800;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 768px) {
+
+  #citizen-notifications
+    .data-list
+    > button
+    .data-row {
+    padding: 15px 2px !important;
+    gap: 11px !important;
+  }
+
+  #citizen-notifications .data-name {
+    font-size: 14px;
+  }
+
+  #citizen-notifications .data-meta {
+    font-size: 12px;
+  }
+
+  #citizen-notifications
+    .status-badge {
+    font-size: 9px;
+    padding: 4px 7px;
+  }
+}
+
+
+@media (max-width: 576px) {
+
+  #citizen-notifications
+    .citizen-card-header {
+    align-items: flex-start;
+  }
+
+  #citizen-notifications
+    .citizen-card-header
+    > .status-badge {
+    margin-top: 2px;
+  }
+
+  #citizen-notifications
+    .data-row {
+    flex-wrap: nowrap;
+  }
+
+  #citizen-notifications
+    .data-row
+    > div:nth-child(2) {
+    min-width: 0;
+  }
+
+  #citizen-notifications
+    .data-name {
+    font-size: 13px;
+  }
+
+  #citizen-notifications
+    .data-meta {
+    font-size: 11px;
+  }
+
+}

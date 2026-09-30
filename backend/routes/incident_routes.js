@@ -4,26 +4,45 @@ const {
     createIncident,
     getIncidents,
     getIncidentById,
-    updateIncidentStatus
+    updateIncidentStatus,
+    getIncidentEvidence
 } = require("../controllers/incident_controller");
+const Incident = require("../models/incident");
+const { protect, authorize, authorizeAuthorityOrAdmin } = require("../middlewares/auth_middleware");
+
+const uploadEvidence = require("../middlewares/uploadEvidence");
 
 const router = express.Router();
 
+router.get("/evidence/:fileId", getIncidentEvidence);
+router.use(protect, authorize("citizen", "authority", "admin"));
 
-// GET all incidents
-// POST new incident
 router
     .route("/")
     .get(getIncidents)
-    .post(createIncident);
+    .post(
+        uploadEvidence.fields([
+            { name: "images", maxCount: 5 },
+            { name: "videos", maxCount: 2 }
+        ]),
+        createIncident
+    );
 
+router.get("/active", async (req, res, next) => {
+    try {
+        const data = await Incident.find({ status: { $ne: "resolved" } })
+            .sort({ createdAt: -1 })
+            .limit(1000)
+            .lean();
+        res.status(200).json({ success: true, count: data.length, data });
+    } catch (error) {
+        next(error);
+    }
+});
 
-// GET single incident
-// PATCH incident status
 router
     .route("/:id")
     .get(getIncidentById)
-    .patch(updateIncidentStatus);
-
+    .patch(authorizeAuthorityOrAdmin, updateIncidentStatus);
 
 module.exports = router;

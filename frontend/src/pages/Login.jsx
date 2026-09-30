@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { apiBaseUrl } from "../services/api";
 
 function Login() {
   const navigate = useNavigate();
@@ -37,7 +38,7 @@ function Login() {
     try {
       setLoading(true);
 
-      const response = await fetch("http://localhost:5000/api/auth/login", {
+      const response = await fetch(`${apiBaseUrl}/auth/login`, {
         method: "POST",
 
         headers: {
@@ -69,17 +70,14 @@ function Login() {
       // =================================
 
       if (data.user.role === "admin") {
-        navigate("/admin", {
-          replace: true,
-        });
-      } else if (data.user.role === "authority") {
-        navigate("/command-center", {
-          replace: true,
-        });
+        navigate("/admin", { replace: true });
+      } else if (
+        data.user.role === "authority" &&
+        data.user.authorityStatus === "verified"
+      ) {
+        navigate("/command-center", { replace: true });
       } else {
-        navigate("/dashboard", {
-          replace: true,
-        });
+        navigate("/dashboard", { replace: true });
       }
     } catch (error) {
       setError(error.message || "Unable to login. Please try again.");
@@ -97,10 +95,10 @@ function Login() {
             <div className="auth-brand text-center">
               <div className="brand-mark">C</div>
 
-              <h1>CASCADE-NET</h1>
+              <h1>SENTRY · SIH26191</h1>
 
               <p>
-                Landslide Risk Monitoring
+                Multi-Hazard Disaster Intelligence
                 <br />
                 &amp; Early Warning System
               </p>
@@ -210,7 +208,7 @@ function Login() {
 
               {/* Footer */}
               <div className="auth-divider">
-                <span>NEW TO CASCADE-NET?</span>
+                <span>NEW TO SENTRY · SIH26191?</span>
               </div>
 
               <Link to="/signup" className="secondary-auth-button">

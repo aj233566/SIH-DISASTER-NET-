@@ -1,0 +1,306 @@
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import { MapContainer, TileLayer, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { DEMO_MAP_CONFIG } from "../../data/gis/demoGisData";
+import TilePrefetcher from "./TilePrefetcher";
+
+/**
+ * Google-Maps-style basemap modes, each a real keyless Esri tile service
+ * (no CSS filters — every mode is genuinely that map, which is both more
+ * legible and far cheaper to pan than filtering one basemap on the fly):
+ *   • map       — World Street Map (the default road map)
+ *   • satellite — World Imagery (Google-Earth-style aerial/satellite)
+ *   • terrain   — World Topographic (shaded relief, contours, rivers)
+ *   • dark      — Dark Gray Canvas (muted dark operations backdrop)
+ * `labels` names a transparent reference overlay for modes whose base has no
+ * place names baked in (satellite, dark).
+ */
+export const BASEMAPS = {
+  // Every basemap here is FREE, KEYLESS, and has no per-month tile quota — so
+  // the app can never hit a paid/expired-key wall (the reason we moved off
+  // TomTom's 200k-tiles/month evaluation tier). All are plain <img> raster
+  // tiles → render reliably everywhere, no WebGL/vector blanking, no GPU load.
+  //
+  // MAP = OpenStreetMap standard. The most detailed free map of India at
+  // street/village level (every hamlet, track and lane), served from OSM's
+  // global Fastly CDN. The {s} subdomain rotation (a/b/c) lets the browser pull
+  // tiles over parallel connections, which is the single biggest cold-load
+  // speed win on a bandwidth-limited link.
+  map: {
+    // Esri World Street Map. Moved OFF OpenStreetMap's public tiles: OSM's
+    // volunteer tile servers actively BLOCK apps under their usage policy
+    // (returning 403 "Access blocked"), which is exactly what made the map
+    // crawl / show blocked tiles. Esri's keyless basemaps allow app usage and
+    // are already used here for SAT/TERRAIN/DARK, so they load reliably and
+    // are not rate-limited the way OSM public tiles are. Same street-map detail.
+    type: "raster",
+    url:
+      "https://services.arcgisonline.com/arcgis/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+    attribution:
+      "Tiles &copy; Esri &mdash; Esri, HERE, Garmin, USGS, NGA, OpenStreetMap contributors",
+    maxNativeZoom: 19,
+    maxZoom: 19,
+  },
+  // DARK = Esri Dark Gray Canvas (muted operations backdrop) + a matching
+  // reference overlay for place labels.
+  dark: {
+    type: "raster",
+    url:
+      "https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+    attribution: "Tiles &copy; Esri",
+    maxNativeZoom: 16, // Esri dark canvas tops out at z16; upscale beyond
+    maxZoom: 19,
+    labels:
+      "https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}",
+  },
+  satellite: {
+    // Esri World Imagery (Google-Earth-style aerial) + a transparent reference
+    // overlay for road/place labels.
+    type: "raster",
+    url:
+      "https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    attribution: "Imagery &copy; Esri, Maxar, Earthstar Geographics",
+    maxZoom: 19,
+    labels:
+      "https://services.arcgisonline.com/arcgis/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+  },
+  // TERRAIN = Esri World Topographic (shaded relief, contours, rivers) — the
+  // mountain terrain that matters for landslide/flood context.
+  terrain: {
+    type: "raster",
+    url:
+      "https://services.arcgisonline.com/arcgis/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
+    attribution: "Tiles &copy; Esri, HERE, Garmin, USGS, NGA",
+    maxZoom: 19,
+  },
+};
+
+/* India geographic bounds (incl. island territories) — the map is geofenced
+   here so operators can zoom out to the whole nation but not drift off into
+   empty ocean / other countries. */
+export const INDIA_BOUNDS = L.latLngBounds(
+  L.latLng(4.0, 65.0), // south-west (covers Indira Point / Lakshadweep)
+  L.latLng(39.0, 100.0), // north-east (covers Ladakh / Arunachal / Andaman)
+);
+
+/**
+ * Leaflet measures its container's pixel size once, at construction, and
+ * only re-measures automatically on the browser's native 'resize' event.
+ * If the container's real size settles AFTER that (a web font swapping in
+ * and reflowing the header row, the full bootstrap.min.css or gis.css
+ * finishing parse/apply a moment after first paint on a slow connection,
+ * any other CSS-driven reflow that isn't a window resize), Leaflet keeps
+ * using the stale, smaller size it first measured: tiles only ever load
+ * to cover that smaller rect, leaving the rest of the — now visually
+ * wider — container blank, exactly matching the reported "left ~55% of
+ * the map is blank/gray" screenshot. Confirmed this is a timing race and
+ * not a CSS sizing bug: .gis-workspace/.gis-map-container are correctly
+ * width:100%/height:100% with no fixed dimensions, and a plain browser
+ * window resize already re-renders the map correctly (Leaflet's native
+ * resize listener), which is exactly the case a non-window-resize reflow
+ * falls through. A ResizeObserver on the map's own container, calling
+ * Leaflet's own invalidateSize(), is Leaflet's documented fix for this —
+ * it reacts to the container's actual box size changing, regardless of
+ * what caused the change, instead of only to the browser window resizing.
+ */
+/** Emits the live Leaflet map instance up to the parent once it's ready, so
+    non-child UI (the offline-download panel, zone quick-jump) can drive it. */
+function MapReadyEmitter({ onReady }) {
+  const map = useMap();
+  useEffect(() => {
+    if (onReady) onReady(map);
+  }, [map, onReady]);
+  return null;
+}
+
+function MapAutoResize() {
+  const map = useMap();
+  useEffect(() => {
+    const container = map.getContainer();
+    let t = null;
+    const fit = () => map.invalidateSize({ pan: false });
+
+    // (a) Staggered re-measures after mount. The map's initial size is measured
+    // once at construction; if the surrounding layout is still settling (fonts
+    // swapping in, panels reflowing, CSS finishing parse), that first measure can
+    // be a small/stale rect and the map only paints a corner. Re-fitting several
+    // times over the first ~1.5s reliably catches the final size.
+    const timers = [60, 200, 500, 1000, 1500].map((ms) => setTimeout(fit, ms));
+
+    // (b) ResizeObserver: debounce so we re-fit ONCE the container box settles,
+    // but also fit immediately on the first change so a corner-only render is
+    // corrected without waiting out the debounce.
+    let firstObserved = true;
+    const observer = new ResizeObserver(() => {
+      if (firstObserved) {
+        firstObserved = false;
+        fit();
+      }
+      clearTimeout(t);
+      t = setTimeout(fit, 250);
+    });
+    observer.observe(container);
+    return () => {
+      timers.forEach(clearTimeout);
+      clearTimeout(t);
+      observer.disconnect();
+    };
+  }, [map]);
+  return null;
+}
+
+/**
+ * MapView — Core Composition Root for SENTRY · SIH26191 GIS Map
+ *
+ * Responsibilities:
+ * 1. Initializes Leaflet MapContainer with responsive dimensions.
+ * 2. Mounts OpenStreetMap standard tile layer with mandatory attribution.
+ * 3. Acts as the parent container for upcoming child layers (Incidents, Facilities, Roads, Routes).
+ */
+export default function MapView({
+  center = [22.5, 82.5],
+  zoom = 5,
+  className = "gis-dark-tiles",
+  basemap = "map",
+  onMapReady,
+  children,
+}) {
+  const base = BASEMAPS[basemap] || BASEMAPS.map;
+  // Tile-loading indicator: TileLayer fires 'loading' whenever a new batch
+  // of tiles is requested (initial mount, every pan/zoom that reveals new
+  // tiles) and 'load' once that batch has fully arrived. Already-rendered
+  // tiles are never touched — Leaflet paints each tile as it individually
+  // arrives regardless of this indicator, so this is a pure visual
+  // affordance, never a gate on rendering. The 200ms delay before showing
+  // it is deliberate: on a fast connection a tile batch usually resolves
+  // well under that, so the indicator never appears at all and doesn't
+  // flash on every ordinary pan; it only surfaces when a load is actually
+  // slow enough (the exact case reported: "map bohot dhere dhere load ho
+  // raha hai") that the user needs to know something is happening.
+  const [tilesLoading, setTilesLoading] = useState(false);
+  const showTimeoutRef = useRef(null);
+
+  const handleTileLoadStart = useCallback(() => {
+    clearTimeout(showTimeoutRef.current);
+    showTimeoutRef.current = setTimeout(() => setTilesLoading(true), 200);
+  }, []);
+
+  const handleTileLoadDone = useCallback(() => {
+    clearTimeout(showTimeoutRef.current);
+    setTilesLoading(false);
+  }, []);
+
+  useEffect(() => () => clearTimeout(showTimeoutRef.current), []);
+
+  return (
+    <div className="gis-map-container">
+      {tilesLoading && (
+        <div
+          className="gis-map-loading-indicator"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="gis-map-loading-dot" />
+          LOADING TILES
+        </div>
+      )}
+      <MapContainer
+        center={center}
+        zoom={zoom}
+        minZoom={DEMO_MAP_CONFIG.minZoom}
+        maxZoom={DEMO_MAP_CONFIG.maxZoom}
+        scrollWheelZoom={true}
+        zoomControl={true}
+        /* Geofence to India: operators can zoom out to the whole nation but
+           the viewport is repelled from drifting off into open ocean / other
+           countries (maxBoundsViscosity:1 = a hard edge). Also prevents the
+           MapLibre engine throwing WebGL projection errors at polar latitudes. */
+        maxBounds={INDIA_BOUNDS}
+        maxBoundsViscosity={1.0}
+        /* PERFORMANCE: render every vector overlay (risk zones, heatmap,
+           routes, roads, villages) onto a single <canvas> instead of one SVG
+           DOM node per shape. With this many semi-transparent circles and
+           polygons, SVG reflow on each pan/zoom frame is the dominant cause
+           of lag; a canvas renderer draws them all in one pass and is the
+           single biggest smoothness win here (per Leaflet perf guidance). */
+        preferCanvas={true}
+        /* Leaflet's drag-inertia glide (the momentum panning after you
+           release a drag) defaults to inertiaMaxSpeed: Infinity — the
+           velocity computed from the last pointer-move events before
+           release is used uncapped, however large it is. Reproduced live:
+           an unusually fast drag release left the map pane's transform
+           growing on its own for several seconds with zero further input,
+           settling tens of thousands of pixels from any real location
+           (map rendered blank / at a nonsensical zoomed-out position).
+           A finite inertiaMaxSpeed bounds the worst case regardless of the
+           triggering velocity, without changing how a normal drag feels. */
+        inertiaMaxSpeed={1500}
+        inertiaDeceleration={3400}
+        /* PERFORMANCE (desktop + mobile): integer zoom. Fractional zoom
+           (zoomSnap:0.5) forces Leaflet to CSS-scale every tile on each partial
+           zoom step — the single biggest pan/zoom lag on both desktop and
+           mobile. Whole-level zoom snaps cleanly and needs no per-tile scaling.
+           Default wheel sensitivity so a notch zooms a full level rather than
+           feeling sluggish, and fadeAnimation:false drops the per-tile fade
+           compositing that also stutters on weaker GPUs. */
+        zoomSnap={1}
+        zoomDelta={1}
+        fadeAnimation={false}
+        style={{ height: "100%", width: "100%" }}
+        className={className}
+      >
+        <MapAutoResize />
+        {onMapReady && <MapReadyEmitter onReady={onMapReady} />}
+
+        <TilePrefetcher
+          key={`prefetch-${basemap}`}
+          urlTemplate={base.url}
+          subdomains={base.subdomains || 'abc'}
+          maxNativeZoom={base.maxNativeZoom || base.maxZoom || 19}
+        />
+
+        {/* Active basemap (raster). `key` forces a clean layer swap on mode
+           change. TomTom for street/dark/satellite, Esri for terrain. */}
+        <TileLayer
+          key={basemap}
+          className="gis-base-layer"
+          attribution={base.attribution}
+          url={base.url}
+          subdomains={base.subdomains || "abc"}
+          tileSize={base.tileSize || 256}
+          zoomOffset={base.zoomOffset || 0}
+          maxNativeZoom={base.maxNativeZoom}
+          maxZoom={base.maxZoom || 19}
+          keepBuffer={1}
+          updateWhenZooming={false}
+          updateWhenIdle={true}
+          crossOrigin={true}
+          eventHandlers={{
+            loading: handleTileLoadStart,
+            load: handleTileLoadDone,
+          }}
+        />
+
+        {/* Transparent roads/labels overlay for the satellite mode. */}
+        {base.labels ? (
+          <TileLayer
+            key={`${basemap}-labels`}
+            className="gis-ref-layer"
+            url={base.labels}
+            tileSize={base.tileSize || 256}
+            zoomOffset={base.zoomOffset || 0}
+            maxNativeZoom={base.maxNativeZoom}
+            maxZoom={base.maxZoom || 19}
+            keepBuffer={1}
+            updateWhenZooming={false}
+            crossOrigin={true}
+          />
+        ) : null}
+
+        {/* Slot for future child layers (Incidents, Facilities, Roads, Routes) */}
+        {children}
+      </MapContainer>
+    </div>
+  );
+}

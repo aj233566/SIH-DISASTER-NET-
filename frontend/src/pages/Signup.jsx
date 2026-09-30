@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { apiBaseUrl } from "../services/api";
 
 function Signup() {
   const navigate = useNavigate();
@@ -171,7 +172,7 @@ function Signup() {
       // =================================================
       // SEND REQUEST
       // =================================================
-      const response = await fetch("http://localhost:5000/api/auth/signup", {
+      const response = await fetch(`${apiBaseUrl}/auth/signup`, {
         method: "POST",
 
         headers: {
@@ -238,10 +239,10 @@ function Signup() {
             <div className="auth-brand text-center">
               <div className="brand-mark">C</div>
 
-              <h1>CASCADE-NET</h1>
+              <h1>SENTRY · SIH26191</h1>
 
               <p>
-                Landslide Risk Monitoring
+                Multi-Hazard Disaster Intelligence
                 <br />& Early Warning System
               </p>
             </div>
@@ -497,7 +498,7 @@ function Signup() {
 
                       <span>
                         All fields below are required. Your application will be
-                        reviewed and approved by a CASCADE-NET administrator.
+                        reviewed and approved by a SENTRY · SIH26191 administrator.
                       </span>
                     </div>
 
@@ -660,7 +661,7 @@ function Signup() {
                   />
 
                   <label htmlFor="terms">
-                    I agree to the CASCADE-NET terms and acknowledge that
+                    I agree to the SENTRY · SIH26191 terms and acknowledge that
                     submitted incident information may be used for disaster
                     monitoring and response.
                   </label>

@@ -30,6 +30,28 @@ const protect = (req, res, next) => {
     }
 };
 
+const optionalProtect = (req, res, next) => {
+    const authHeader = req.headers?.authorization;
+    if (!authHeader) {
+        return next();
+    }
+    if (!authHeader.startsWith("Bearer ")) {
+        return res.status(401).json({
+            success: false,
+            message: "Invalid authorization header"
+        });
+    }
+    try {
+        req.user = jwt.verify(authHeader.split(" ")[1], process.env.JWT_SECRET);
+        return next();
+    } catch (error) {
+        return res.status(401).json({
+            success: false,
+            message: "Invalid or expired token"
+        });
+    }
+};
+
 
 const authorize = (...roles) => {
     return (req, res, next) => {
@@ -85,10 +107,27 @@ const authorizeVerifiedAuthority = (req, res, next) => {
     next();
 };
 
+const authorizeAuthorityOrAdmin = (req, res, next) => {
+    if (req.user?.role === "admin") {
+        return next();
+    }
+
+    if (req.user?.role === "authority" && req.user.authorityStatus === "verified") {
+        return next();
+    }
+
+    return res.status(403).json({
+        success: false,
+        message: "Verified authority or admin access required."
+    });
+};
+
 
 module.exports = {
     protect,
+    optionalProtect,
     authorize,
     authorizeAdmin,
-    authorizeVerifiedAuthority
+    authorizeVerifiedAuthority,
+    authorizeAuthorityOrAdmin
 };

@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { useNavigate } from "react-router-dom";
-
-const API_BASE_URL = "http://localhost:5000/api";
+import { apiBaseUrl } from "../services/api";
 
 const getStoredUser = () => {
   try {
@@ -91,12 +90,12 @@ function AdminDashboard() {
         };
 
         const [statsResponse, pendingResponse] = await Promise.all([
-          fetch(`${API_BASE_URL}/admin/stats`, {
+          fetch(`${apiBaseUrl}/admin/stats`, {
             method: "GET",
             headers,
           }),
 
-          fetch(`${API_BASE_URL}/admin/authorities/pending`, {
+          fetch(`${apiBaseUrl}/admin/authorities/pending`, {
             method: "GET",
             headers,
           }),
@@ -197,7 +196,16 @@ function AdminDashboard() {
       return;
     }
 
-    loadAdminData(false);
+    let active = true;
+    Promise.resolve().then(() => {
+      if (active) {
+        loadAdminData(false);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
   }, [token, userId, userRole, loadAdminData, navigate]);
 
   // =================================================
@@ -215,7 +223,7 @@ function AdminDashboard() {
       setError("");
 
       const response = await fetch(
-        `${API_BASE_URL}/admin/authorities/${authorityId}/approve`,
+        `${apiBaseUrl}/admin/authorities/${authorityId}/approve`,
         {
           method: "PATCH",
 
@@ -309,7 +317,7 @@ function AdminDashboard() {
       setError("");
 
       const response = await fetch(
-        `${API_BASE_URL}/admin/authorities/${authorityId}/reject`,
+        `${apiBaseUrl}/admin/authorities/${authorityId}/reject`,
         {
           method: "PATCH",
 
@@ -410,7 +418,7 @@ function AdminDashboard() {
         <header className="cascade-page-header mb-4">
           <div className="row align-items-center g-3">
             <div className="col-12 col-lg">
-              <div className="cascade-eyebrow">CASCADE-NET</div>
+              <div className="cascade-eyebrow">SENTRY · SIH26191</div>
 
               <h1 className="cascade-page-title">Admin Control Center</h1>
 

@@ -1,5 +1,5 @@
 /* =========================================================
-   CASCADE-NET
+   SENTRY · SIH26191
    Midnight Operations Authentication UI
    ========================================================= */
 
@@ -978,7 +978,7 @@ select.auth-input option {
 
 
 /* =========================================================
-   CASCADE-NET
+   SENTRY · SIH26191
    MIDNIGHT OPERATIONS
    COMMAND CENTER + ADMIN DASHBOARD
    ========================================================= */
@@ -2232,3 +2232,4 @@ select.auth-input option {
     min-width: 0;
 
 }
+

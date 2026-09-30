@@ -53,7 +53,7 @@ const createAdmin = async () => {
         await User.create({
 
             name:
-                "CASCADE-NET Administrator",
+                "SENTRY · SIH26191 Administrator",
 
             email:
                 adminEmail,

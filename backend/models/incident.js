@@ -2,6 +2,14 @@ const mongoose = require("mongoose");
 
 const incidentSchema = new mongoose.Schema(
     {
+        clientReportId: {
+            type: String,
+            trim: true,
+            maxlength: 100,
+            unique: true,
+            sparse: true
+        },
+
         type: {
             type: String,
             required: [true, "Incident type is required"],
@@ -13,6 +21,12 @@ const incidentSchema = new mongoose.Schema(
                 "slope_movement",
                 "infrastructure_damage"
             ]
+        },
+
+        hazardSubtype: {
+            type: String,
+            enum: ["landslide", "flood", "earthquake", "erosion", "cloudburst", "storm", "heatwave", "wildfire", "drought"],
+            default: null
         },
 
         description: {
@@ -30,18 +44,29 @@ const incidentSchema = new mongoose.Schema(
         location: {
             latitude: {
                 type: Number,
-                required: [true, "Latitude is required"]
+                required: [true, "Latitude is required"],
+                min: -90,
+                max: 90
             },
 
             longitude: {
                 type: Number,
-                required: [true, "Longitude is required"]
+                required: [true, "Longitude is required"],
+                min: -180,
+                max: 180
             },
 
             address: {
                 type: String,
                 default: ""
             }
+        },
+
+        linkedHabitation: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Habitation",
+            default: null,
+            index: true
         },
 
         status: {
